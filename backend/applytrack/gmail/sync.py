@@ -103,11 +103,15 @@ def sync_mailbox(session: Session, *, full: bool = False) -> SyncResult:
         if email.application_id is not None:
             touched_apps.add(email.application_id)
 
-    # Recompute aggregates/status for every application that gained emails.
-    for app_id in touched_apps:
-        _recompute_application(session, app_id)
-
+    # New mail can link threads that belong to the same job (e.g. a rejection
+    # for an earlier confirmation), so rebuild the job grouping when anything
+    # arrived. Cheap: it runs on the local database only.
     result.applications = len(touched_apps)
+    if result.new_emails:
+        from ..reclassify import regroup_all  # local import: reclassify imports sync
+
+        session.flush()
+        regroup_all(session)
 
     # Advance the incremental cursor.
     new_history_id = _current_history_id(service)
@@ -407,11 +411,20 @@ def _recompute_application(session: Session, app_id: int) -> None:
     # SQLite returns naive datetimes on read while freshly-parsed mail is
     # tz-aware; normalise before comparing so min/max never mix the two.
     all_dates = [_as_aware(e.received_at) for e in emails]
-    sent_dates = [_as_aware(e.received_at) for e in emails if e.direction == "sent"]
+    # "Applied on": your application mail, else the first application-related
+    # mail (e.g. the confirmation) — never a later reply or forward of yours.
+    applied = [
+        _as_aware(e.received_at) for e in emails
+        if _intent_for(e).value == "application_sent"
+    ]
+    relevant = [
+        _as_aware(e.received_at) for e in emails
+        if _intent_for(e).value != "not_application_related"
+    ]
 
     app.current_status = status.value
     app.email_count = len(emails)
-    app.first_applied_at = min(sent_dates) if sent_dates else min(all_dates)
+    app.first_applied_at = min(applied or relevant or all_dates)
     app.last_event_at = max(all_dates)
     session.add(app)
 

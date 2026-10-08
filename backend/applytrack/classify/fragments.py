@@ -47,12 +47,15 @@ FRAGMENTS: dict[Intent, list[str]] = {
         "andere kandidat", "anderen kandidat", "andere bewerber",
         "fuer jemanden anderen", "umfassender erfuell", "nicht entsprech",
         "absage", "haben wir uns entschied", "entschieden, ", "abzusagen",
-        "nicht zum zug",
+        "nicht zum zug", "bedauerlicherweise", "nicht in die engere wahl",
+        "nicht weiter in betracht",
         # EN
         "unfortunately", "we regret", "regret to inform", "not be proceeding",
         "will not proceed", "not moving forward", "other candidates",
         "another candidate", "decided to move forward with", "unable to offer",
         "not be moving ahead", "were not selected", "will not be progressing",
+        "not have the best fit", "not the best fit", "not the right fit",
+        "unable to consider",
     ],
     Intent.OFFER: [
         # DE
@@ -66,35 +69,45 @@ FRAGMENTS: dict[Intent, list[str]] = {
         # DE
         "zweite runde", "zweiten runde", "naechste runde", "folgegespraech",
         "fallstudie", "assessment", "weitere runde", "zweites gespraech",
-        "weiteres gespraech", "im prozess weitermachen", "im prozess weiter",
+        "weiteres gespraech", "weiteren gespraech", "weiteren interview",
+        "weiteres interview", "finale gespraech", "finalen gespraech",
+        "zweitrunden", "im prozess weitermachen", "im prozess weiter",
         "referenz einholen", "referenzen einholen",
         # EN
         "second round", "next round", "final round", "case study",
         "assessment center", "move to the next stage", "second interview",
-        "reference check",
+        "next interview", "further interview", "final interview", "reference check",
     ],
     # Only unambiguous invitations. Vaguer cues ("next steps", "availability")
     # also appear in plain acknowledgments — see WEAK_INTERVIEW_FRAGMENTS.
     Intent.INTERVIEW_INVITE: [
         # DE
         "einladung zum gespraech", "einladung zu einem gespraech",
-        "zum gespraech einladen", "zu einem gespraech einladen",
-        "zu einem vorstellungsgespraech", "vorstellungsgespraech",
-        "telefonisches interview", "videointerview", "video-interview",
+        "einladung zum interview", "gespraech einladen", "interview einladen",
+        "zu einem gespraech", "zu einem vorstellungsgespraech", "vorstellungsgespraech",
+        "persoenlichen gespraech", "persoenliches gespraech", "gespraechstermin",
+        "interviewtermin", "terminvorschlag", "telefoninterview",
+        "telefonisches interview", "videointerview", "video-interview", "erstgespraech",
         "kennenlernen", "kennenzulernen", "termin vereinbaren",
-        "zu einem interview einladen", "zum interview einladen",
+        "ankunft an der rezeption", "bei ihrer ankunft", "bei deiner ankunft",
+        "ein gespraech mit",
         # EN
         "invite you to", "invite you for", "schedule a call", "schedule an interview",
-        "phone screen", "first interview", "interview invitation",
+        "schedule your interview", "your interview", "interview is scheduled",
+        "phone screen", "first interview", "interview invitation", "invitation to interview",
+        "like to meet you", "want to meet you", "would like to meet",
+        "in-person interview", "in person interview", "interview availability",
+        "available time slots", "book a time",
     ],
     Intent.INFO_REQUEST: [
         # DE (Sie + Du)
         "benoetigen wir noch", "bitte senden sie uns", "bitte sende uns",
         "nachreichen", "arbeitszeugnis", "notenauszug", "fehlende unterlagen",
-        "koennten sie uns", "koenntest du uns",
+        "koennten sie uns", "koenntest du uns", "darf ich dich bitten",
+        "darf ich sie bitten", "zuzusenden", "zusenden",
         # EN
         "could you please send", "we still need", "missing documents",
-        "please provide", "send us your",
+        "please provide", "send us your", "please send", "could you send",
     ],
     Intent.APPLICATION_RECEIVED: [
         # DE (Sie + Du)
@@ -102,7 +115,9 @@ FRAGMENTS: dict[Intent, list[str]] = {
         "danke fuer ihre bewerbung", "danke fuer deine bewerbung",
         "bewerbung erhalten", "unterlagen erhalten", "eingang ihrer bewerbung",
         "eingang deiner bewerbung", "eingang ihrer unterlagen",
-        "eingang deiner unterlagen", "bestaetigen den eingang", "in bearbeitung",
+        "eingang deiner unterlagen", "bestaetigen den eingang", "hiermit den eingang",
+        "den eingang ihrer", "den eingang deiner", "empfangsbestaetigung",
+        "eingangsbestaetigung", "in bearbeitung",
         "melden uns", "pruefen ihre unterlagen", "pruefen deine unterlagen",
         "pruefen wir ihre", "pruefen wir deine", "sorgfaeltig pruefen",
         # EN
@@ -144,18 +159,44 @@ def fold(text: str) -> str:
     return _WS_RE.sub(" ", text)
 
 
+# Acknowledgments often describe a *possible* interview ("Falls Ihr Profil passt,
+# laden wir Sie zu einem Gespräch ein", "If selected, we will schedule your
+# interview"). Interview / next-round cues inside such conditional sentences
+# don't count.
+_CONDITIONAL_RE = re.compile(
+    r"\b(falls|sollte|sollten|sofern|fuer den fall|wenn ihr profil|wenn dein profil|"
+    r"if|should|in case|once we|whether)\b"
+)
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?\n])\s+|\n")
+_CONDITION_SENSITIVE = {Intent.INTERVIEW_INVITE, Intent.NEXT_ROUND}
+
+# "Interview" / "Gespräch" in the *subject* of a received mail is a strong cue
+# ("UBP Interview", "Get ready for your interview").
+_SUBJECT_INTERVIEW_RE = re.compile(r"\binterview|gespraech\b|vorstellungsgespraech")
+
+
+def _unconditional_sentences(folded: str) -> str:
+    return " ".join(
+        s for s in _SENTENCE_SPLIT_RE.split(folded) if s and not _CONDITIONAL_RE.search(s)
+    )
+
+
 def matched_fragments(text: str) -> dict[Intent, list[str]]:
     """Return, per intent, the list of fragments found in ``text``."""
     folded = fold(text)
+    unconditional = _unconditional_sentences(folded)
     hits: dict[Intent, list[str]] = {}
     for intent, fragments in FRAGMENTS.items():
-        found = [f for f in fragments if f in folded]
+        haystack = unconditional if intent in _CONDITION_SENSITIVE else folded
+        found = [f for f in fragments if f in haystack]
         if found:
             hits[intent] = found
     return hits
 
 
-def classify_by_precedence(text: str) -> tuple[Intent, list[str], bool]:
+def classify_by_precedence(
+    text: str, subject: str | None = None
+) -> tuple[Intent, list[str], bool]:
     """Pick the strongest matching intent.
 
     Returns ``(intent, matched_fragments, weak)``. ``weak`` is True when the
@@ -163,13 +204,15 @@ def classify_by_precedence(text: str) -> tuple[Intent, list[str], bool]:
     ``(NOT_APPLICATION_RELATED, [], False)``.
     """
     hits = matched_fragments(text)
+    if subject and _SUBJECT_INTERVIEW_RE.search(fold(subject)):
+        hits.setdefault(Intent.INTERVIEW_INVITE, []).append("subject: interview")
     for intent in EMAIL_PRECEDENCE:
         if intent in hits:
             return intent, hits[intent], False
 
     # Nothing unambiguous matched — fall back to weak interview cues.
-    folded = fold(text)
-    weak = [f for f in WEAK_INTERVIEW_FRAGMENTS if f in folded]
+    unconditional = _unconditional_sentences(fold(text))
+    weak = [f for f in WEAK_INTERVIEW_FRAGMENTS if f in unconditional]
     if weak:
         return Intent.INTERVIEW_INVITE, weak, True
     return Intent.NOT_APPLICATION_RELATED, [], False

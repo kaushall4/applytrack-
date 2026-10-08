@@ -230,6 +230,8 @@ def extract_company(header: str, subject: str | None = None) -> str | None:
 
 # Markers after which the role usually follows (longest/most specific first).
 _ROLE_MARKERS = [
+    r"empfangsbest(?:ä|ae)tigung ihrer bewerbung\s*[-–:|]\s*",
+    r"absage\s*[-–:|]\s*",
     r"ihre bewerbung\s*[|:]\s*",  # "Ihre Bewerbung | <role>"
     r"deine bewerbung\s*[|:]\s*",
     r"ihre bewerbung als\s+",
@@ -243,7 +245,9 @@ _ROLE_MARKERS = [
     r"bewerbung bei\s+\S+\s+",
     r"your application for\s+",
     r"application for the position of\s+",
+    r"application for the position\s+",
     r"application for\s+",
+    r"your application\s*[-–|]\s*",
     r"interview invitation for\s+",
     r"invitation for\s+",
     r"your application:\s+",
@@ -253,9 +257,14 @@ _ROLE_MARKERS = [
 # Role mentioned in the body: "…deine Bewerbung als <role>." / "…for the role of <role>."
 # Captures up to the end of the sentence or a trailing "bei/at <Company>".
 _BODY_ROLE_RE = re.compile(
-    r"(?:bewerbung als|bewerbung f(?:ü|ue)r die (?:stelle|position)(?: als)?|"
+    r"(?:bewerbung als|bewerbung (?:f(?:ü|ue)r|auf) die (?:stelle|position)(?: als)?|"
+    r"interesse an (?:unserer|der) (?:stelle|position)(?: als)?|"
     r"for the (?:role|position) of|application for the (?:role|position) of|"
-    r"application for)\s+(.{3,120}?)(?:[.!?\n]|\s+(?:bei|at|with)\s+[A-ZÄÖÜ]|$)",
+    r"application for)\s+(.{3,120}?)"
+    # End of the title: sentence end, "bei/at <Company>", " - 342286BR",
+    # "… is scheduled", "… und für Ihr Interesse".
+    r"(?:[.!?\n]|\s+(?:bei|at|with)\s+[A-ZÄÖÜ]|\s+-\s*\d{5,}|"
+    r"\s+(?:is|has|was|will|ist|wird|wurde)\s|\s+(?:and|und)\s+(?:for|f(?:ü|ue)r)\b|$)",
     re.IGNORECASE,
 )
 
@@ -268,24 +277,33 @@ _NO_ROLE_RE = re.compile(
 
 
 def _clean_role(role: str, company: str | None) -> str | None:
-    # Cut at "… bei <company>" / "… at <company>".
-    role = re.split(r"\s+(?:bei|at)\s+[A-ZÄÖÜ]", role)[0]
+    # Cut at "… bei (der) <company>" / "… at (the) <company>".
+    role = re.split(r"\s+(?:bei|at)\s+(?:der\s+|dem\s+|den\s+|die\s+|the\s+)?[A-ZÄÖÜ]", role)[0]
     # Cut trailing application/confirmation suffixes after a dash/pipe.
     role = re.split(
         r"\s*[-–—|]\s*(?:application|your application|bewerbung|confirmation|"
-        r"status|job\s*number|ref)",
+        r"status|job\s*number|ref|follow[- ]?up|feedback|update|interview|next steps)",
         role,
         flags=re.IGNORECASE,
     )[0]
+    # Drop leading boilerplate: "the position as …", "SPECULATIVE APPLICATION - …".
+    role = re.sub(r"^(?:the\s+)?position\s+(?:(?:as|of)\b\s*)?", "", role, flags=re.IGNORECASE)
+    role = re.sub(
+        r"^(?:speculative|unsolicited|initiativ\w*)\s+(?:application|bewerbung)\s*[-–:|]?\s*",
+        "",
+        role,
+        flags=re.IGNORECASE,
+    )
     # Drop reference numbers: (337922BR), (Job number: …), (1172).
     role = re.sub(r"\(\s*(?:job\s*number[^)]*|ref[^)]*|\d+[a-z]*)\s*\)", "", role, flags=re.IGNORECASE)
-    # Drop workload percentages and gender tags.
-    role = re.sub(r"\(?\s*\d{2,3}\s*[-–]\s*\d{2,3}\s*%\s*\)?", "", role)
-    role = re.sub(r"\(?\s*\d{2,3}\s*%\s*\)?", "", role)
+    # Drop workload percentages and gender tags (replace with a space so the
+    # neighbouring words don't get glued together; spaces are collapsed below).
+    role = re.sub(r"\(?\s*\d{2,3}\s*[-–]\s*\d{2,3}\s*%\s*\)?", " ", role)
+    role = re.sub(r"\(?\s*\d{2,3}\s*%\s*\)?", " ", role)
     role = re.sub(
-        r"\(?\s*\b[mwfdax](?:\s*/\s*[mwfdax])+\b\s*[;)]?", "", role, flags=re.IGNORECASE
+        r"\(?\s*\b[mwfdax](?:\s*/\s*[mwfdax])+\b\s*[;)]?", " ", role, flags=re.IGNORECASE
     )
-    role = re.sub(r"\(\s*all genders\s*\)", "", role, flags=re.IGNORECASE)
+    role = re.sub(r"\(\s*all genders\s*\)", " ", role, flags=re.IGNORECASE)
     # Strip a leading company name left in the role ("UBS Client Account Manager").
     if company and role.lower().startswith(company.lower()):
         role = role[len(company):]
@@ -329,6 +347,34 @@ def extract_role(subject: str, company: str | None = None) -> str | None:
     if company and low.startswith(company.lower()):
         return _clean_role(s[len(company):].lstrip(" -–—|:"), company)
     return None
+
+
+_ROLE_STOPWORDS = {
+    "the", "for", "of", "in", "and", "und", "als", "a", "an", "bei", "der", "die", "das",
+    "m", "w", "d", "f", "x", "to", "at", "im", "am", "mit", "with",
+}
+
+
+def role_tokens(role: str | None) -> frozenset[str]:
+    """Significant words of a role, for comparing near-identical job titles."""
+    return frozenset(
+        t for t in normalise(role).split("-") if t and t not in _ROLE_STOPWORDS and len(t) > 1
+    )
+
+
+def roles_match(a: str | None, b: str | None) -> bool:
+    """True if two role strings describe the same job.
+
+    One must contain all significant words of the other, and the shorter must
+    cover most (≥70 %) of the longer — so "Wealth Management Assistant – Eastern
+    Europe" matches "… Eastern Europe Team (Zurich)", but a generic "Wealth
+    Management Assistant Zurich" does not swallow it.
+    """
+    ta, tb = role_tokens(a), role_tokens(b)
+    small, large = sorted((ta, tb), key=len)
+    if len(small) < 3 or not small <= large:
+        return False
+    return len(small) / len(large) >= 0.7
 
 
 def extract_role_from_body(body: str, company: str | None = None) -> str | None:

@@ -8,6 +8,7 @@ from applytrack.grouping import (
     extract_role,
     extract_role_from_body,
     job_group_key,
+    roles_match,
     thread_group_key,
 )
 
@@ -31,6 +32,58 @@ def test_job_group_key_prefers_ref_then_role_then_thread():
     assert job_group_key("UBS", "CAM", None, "t1") == job_group_key("UBS", "CAM", None, "t2")
     assert job_group_key("UBS", None, None, "t1") != job_group_key("UBS", None, None, "t2")
     assert job_group_key("Unknown", "CAM", None, "t1") == thread_group_key("t1")
+
+
+@pytest.mark.parametrize(
+    "subject, company, expected",
+    [
+        ("Empfangsbestätigung Ihrer Bewerbung - Assistant Relationship Manager 80 - 100% "
+         "for Zurich Desk (f/m/d)", "Julius Bär", "Assistant Relationship Manager for Zurich Desk"),
+        ("UBP - Wealth Management Assistant - Eastern Europe Team (Zurich) - Follow-up on "
+         "Your Interview", "UBP", "Wealth Management Assistant - Eastern Europe Team (Zurich)"),
+        ("UBP – SPECULATIVE APPLICATION - Wealth Management Assistant Zurich (80-100%) - "
+         "Application Confirmation", "UBP", "Wealth Management Assistant Zurich"),
+        ("Your Application - Assistant Relationship Manager, Private Banking", "Sygnum",
+         "Assistant Relationship Manager, Private Banking"),
+        ("Your application for the position Assistant Relationship Manager for CEE",
+         "Julius Bär", "Assistant Relationship Manager for CEE"),
+    ],
+)
+def test_extract_role_more_subject_patterns(subject, company, expected):
+    assert extract_role(subject, company) == expected
+
+
+@pytest.mark.parametrize(
+    "body, expected",
+    [
+        ("Your interview for the role of Client Account Manager WM - 342286BR is scheduled "
+         "for September 28.", "Client Account Manager WM"),
+        ("Vielen Dank für Ihre Bewerbung auf die Stelle als Client Service Executive und für "
+         "Ihr Interesse an einer Tätigkeit bei uns.", "Client Service Executive"),
+    ],
+)
+def test_role_from_body_stops_at_title_end(body, expected):
+    assert extract_role_from_body(body, "Bank") == expected
+
+
+def test_role_drops_bei_der_company():
+    subject = ("Ihre Bewerbung | Assistenz VR-Private Banking Schweiz, 80-100% (m/w/d) (3802) "
+               "bei der DZ PRIVATBANK")
+    assert extract_role(subject, "DZ PRIVATBANK") == "Assistenz VR-Private Banking Schweiz"
+
+
+def test_roles_match_near_identical_titles():
+    assert roles_match("Wealth Management Assistant – Eastern Europe",
+                       "Wealth Management Assistant - Eastern Europe Team (Zurich)")
+
+
+def test_roles_match_rejects_different_jobs():
+    # Generic overlap is not enough …
+    assert not roles_match("Wealth Management Assistant Zurich",
+                           "Wealth Management Assistant - Eastern Europe Team (Zurich)")
+    # … and different desks are different jobs.
+    assert not roles_match("Assistant Relationship Manager for CEE",
+                           "Assistant Relationship Manager Private Banking - Germany & Austria")
 
 
 def test_role_from_body_du_form():

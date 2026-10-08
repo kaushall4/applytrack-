@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ...db import get_session
-from ...models import Application
+from ...models import Application, Email
 from ...schemas import ApplicationDetailOut, ApplicationOut, StatsOut
 from ...status import Status
 
@@ -23,7 +23,7 @@ _SORTABLE = {
 
 # Statuses that count as "awaiting a response from the company".
 _AWAITING = {Status.APPLICATION_SENT.value, Status.APPLICATION_RECEIVED.value, Status.GHOSTED.value}
-_INTERVIEWING = {Status.INTERVIEW_INVITE.value, Status.NEXT_ROUND.value}
+_REACHED_INTERVIEW = {"interview_invite", "next_round", "offer"}
 
 
 @router.get("/stats", response_model=StatsOut)
@@ -38,10 +38,20 @@ def stats(session: Session = Depends(get_session)) -> StatsOut:
     def total(statuses: set[str]) -> int:
         return sum(by_status.get(s, 0) for s in statuses)
 
+    # Interviews = applications that ever reached an interview / further round /
+    # offer, even if a rejection followed — a past interview still counts.
+    effective_intent = func.coalesce(Email.manual_override, Email.intent)
+    reached_interview = session.execute(
+        select(func.count(func.distinct(Email.application_id))).where(
+            Email.application_id.is_not(None),
+            effective_intent.in_(_REACHED_INTERVIEW),
+        )
+    ).scalar_one()
+
     return StatsOut(
         total_applied=sum(by_status.values()),
         awaiting_response=total(_AWAITING),
-        interviews=total(_INTERVIEWING),
+        interviews=reached_interview,
         offers=by_status.get(Status.OFFER.value, 0),
         rejections=by_status.get(Status.REJECTION.value, 0),
         ghosted=by_status.get(Status.GHOSTED.value, 0),

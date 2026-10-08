@@ -52,6 +52,9 @@ def test_stats(client, seeded):
     stats = resp.json()
     assert stats["offers"] >= 1
     assert stats["rejections"] >= 1
+    # Interviews count every application that reached one (Helvetia invite and
+    # Lakeside, whose invite later turned into an offer).
+    assert stats["interviews"] >= 2
     assert stats["total_applied"] >= 4
 
 

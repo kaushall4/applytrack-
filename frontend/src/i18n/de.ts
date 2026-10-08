@@ -34,7 +34,7 @@ export const de: Dict = {
   stats: {
     total: "Bewerbungen gesamt",
     awaiting: "Warten auf Antwort",
-    interviews: "Gespräche",
+    interviews: "Gespräche erhalten",
     offers: "Angebote",
     rejections: "Absagen",
     ghosted: "Ohne Rückmeldung",

@@ -42,17 +42,10 @@ class HeuristicClassifier:
         text = f"{email.subject}\n{email.body}"
         language = detect_language(text)
 
-        # Outbound mail is, by construction, the user's own application.
         if email.direction == "sent":
-            return Classification(
-                intent=Intent.APPLICATION_SENT,
-                confidence=0.9,
-                language=language,
-                source=self.source,
-                reasoning="Outbound message from the tracked account.",
-            ).clamp()
+            return self._classify_outbound(email, language)
 
-        intent, fragments, weak = classify_by_precedence(text)
+        intent, fragments, weak = classify_by_precedence(text, subject=email.subject)
 
         if intent is Intent.NOT_APPLICATION_RELATED:
             # No application signal. If the sender is a known job-board / no-reply
@@ -89,6 +82,45 @@ class HeuristicClassifier:
             source=self.source,
             reasoning=reasoning,
         ).clamp()
+
+
+    def _classify_outbound(self, email: EmailInput, language: str) -> Classification:
+        """Mail the user sent: a new application, or just a reply / forward."""
+        if _REPLY_OR_FORWARD_RE.match(email.subject or ""):
+            # Answering a recruiter or forwarding a mail is part of an existing
+            # process, never a new application (it still shows in the timeline).
+            return Classification(
+                intent=Intent.NOT_APPLICATION_RELATED,
+                confidence=0.9,
+                language=language,
+                source=self.source,
+                reasoning="Your reply or forward — not a new application.",
+            ).clamp()
+        if not _APPLICATION_WORDS_RE.search(f"{email.subject}\n{email.body}"):
+            return Classification(
+                intent=Intent.NOT_APPLICATION_RELATED,
+                confidence=0.6,
+                language=language,
+                source=self.source,
+                reasoning="Outgoing mail without application content.",
+            ).clamp()
+        return Classification(
+            intent=Intent.APPLICATION_SENT,
+            confidence=0.9,
+            language=language,
+            source=self.source,
+            reasoning="Application sent from the tracked account.",
+        ).clamp()
+
+
+# "Re:", "AW:", "Antw:", "Fwd:", "WG:", "FW:" (possibly repeated) at the start.
+_REPLY_OR_FORWARD_RE = re.compile(r"^\s*(?:(?:re|aw|antw|fwd?|wg|tr)\s*:\s*)+", re.IGNORECASE)
+# What an application mail mentions (DE/EN).
+_APPLICATION_WORDS_RE = re.compile(
+    r"bewerb|application|apply|applying|lebenslauf|\bcv\b|resume|curriculum|"
+    r"motivationsschreiben|anschreiben|cover letter|\bstelle\b|position|vacancy",
+    re.IGNORECASE,
+)
 
 
 def classify_heuristic(

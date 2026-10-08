@@ -33,7 +33,7 @@ export const en = {
   stats: {
     total: "Total applications",
     awaiting: "Awaiting response",
-    interviews: "Interviews",
+    interviews: "Interviews received",
     offers: "Offers",
     rejections: "Rejections",
     ghosted: "Ghosted",
