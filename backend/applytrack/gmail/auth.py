@@ -16,7 +16,7 @@ from typing import Literal
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import InstalledAppFlow, WSGITimeoutError
 from googleapiclient.discovery import build
 
 from ..config import get_settings
@@ -163,14 +163,19 @@ def connect_account(intended_address: str, *, open_browser: bool = True) -> str:
     # guarantee a refresh token (so the user stays signed in); ``login_hint``
     # pre-selects the intended Google account to make reconnecting one click.
     extra = {"login_hint": intended_address} if intended_address else {}
-    creds = flow.run_local_server(
-        port=0,
-        prompt="consent",
-        access_type="offline",
-        open_browser=open_browser,
-        timeout_seconds=300,
-        **extra,
-    )
+    try:
+        creds = flow.run_local_server(
+            port=0,
+            prompt="consent",
+            access_type="offline",
+            open_browser=open_browser,
+            timeout_seconds=600,
+            **extra,
+        )
+    except WSGITimeoutError as exc:
+        raise GmailAuthError(
+            "Google sign-in was not completed in time. Please try connecting again."
+        ) from exc
 
     authorized = _profile_address(creds).strip().lower()
     if intended_address and authorized != intended_address:

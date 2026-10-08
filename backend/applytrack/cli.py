@@ -40,6 +40,9 @@ def connect(
     email: str = typer.Argument(
         None, help="The Gmail address to track. Defaults to the last connected account."
     ),
+    no_browser: bool = typer.Option(
+        False, "--no-browser", help="Print the Google sign-in URL instead of opening a browser."
+    ),
 ) -> None:
     """Authorize a Gmail account (read-only) and verify it matches EMAIL."""
     from .models import SyncState
@@ -52,7 +55,7 @@ def connect(
             console.print("[bold red]✗[/] Please pass the Gmail address: applytrack connect you@gmail.com")
             raise typer.Exit(code=1)
         try:
-            address = connect_account(email)
+            address = connect_account(email, open_browser=not no_browser)
         except GmailAuthError as exc:  # includes AccountMismatchError
             console.print(f"[bold red]✗[/] {exc}")
             raise typer.Exit(code=1) from exc
