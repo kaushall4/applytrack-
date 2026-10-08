@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "applytrack"
+version = "0.1.0"
+description = "Track job applications automatically from a dedicated Gmail account — bilingual (DE/EN) email classification, live status, and a clean dashboard."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "ApplyTrack contributors" }]
+keywords = ["gmail", "job-search", "fastapi", "llm", "classification"]
+
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "sqlalchemy>=2.0",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "python-dotenv>=1.0",
+    "google-api-python-client>=2.120",
+    "google-auth-oauthlib>=1.2",
+    "google-auth>=2.29",
+    "anthropic>=0.40",
+    "typer>=0.12",
+    "rich>=13.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1",
+    "pytest-cov>=5.0",
+    "httpx>=0.27",
+    "ruff>=0.4",
+]
+postgres = ["psycopg[binary]>=3.1"]
+desktop = ["pywebview>=5.0"]
+
+[project.scripts]
+applytrack = "applytrack.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["applytrack*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+ignore = [
+    "E501",  # line length handled by formatter, not enforced
+    "B008",  # FastAPI relies on Depends()/Query() in argument defaults
+    "UP042",  # keep `(str, Enum)` mixin for broad compatibility over StrEnum
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]

@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens ────────────────────────────────────────────────────────── */
+/* Channel triplets (R G B) so Tailwind can apply <alpha-value>.               */
+:root {
+  --bg: 247 247 251;
+  --surface: 255 255 255;
+  --surface-2: 244 244 250;
+  --border: 228 228 238;
+  --fg: 23 23 37;
+  --muted: 108 108 130;
+
+  /* Distinct indigo–violet accent (not default blue-grey). */
+  --brand: 109 90 246;
+  --brand-fg: 255 255 255;
+  --ring: 109 90 246;
+
+  /* Soft ambient gradient blobs behind the app shell. */
+  --glow-1: 124 92 252;
+  --glow-2: 56 189 248;
+}
+
+.dark {
+  --bg: 16 15 25;
+  --surface: 24 23 37;
+  --surface-2: 32 31 48;
+  --border: 46 44 66;
+  --fg: 233 233 245;
+  --muted: 151 150 173;
+
+  --brand: 141 124 255;
+  --brand-fg: 13 12 22;
+  --ring: 141 124 255;
+
+  --glow-1: 109 90 246;
+  --glow-2: 14 116 144;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg text-fg font-sans antialiased;
+}
+
+/* Themed, slim scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--border)) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--border));
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Frosted-glass surface used by header and elevated cards. */
+.glass {
+  background-color: rgb(var(--surface) / 0.72);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+/* Loading skeleton shimmer */
+.skeleton {
+  @apply relative overflow-hidden bg-surface-2 rounded-md;
+}
+.skeleton::after {
+  content: "";
+  @apply absolute inset-0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(var(--fg) / 0.06), transparent);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,0 +1,22 @@
+# Python
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.ruff_cache/
+
+# Node
+**/node_modules/
+frontend/dist/
+
+# Local secrets & data (never bake into images)
+.env
+**/credentials.json
+**/token.json
+**/*.db
+
+# VCS / editors
+.git/
+.github/
+**/.idea/
+**/.vscode/

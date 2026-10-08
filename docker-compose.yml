@@ -1,0 +1,36 @@
+# One-command run: `docker compose up --build`
+# Frontend on http://localhost:8080, API proxied through nginx at /api.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    environment:
+      # Persisted SQLite DB on the named volume.
+      DATABASE_URL: sqlite:////data/applytrack.db
+      # Optional — leave empty to use the offline heuristic classifier.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      APPLYTRACK_MODEL: ${APPLYTRACK_MODEL:-claude-haiku-4-5}
+      GHOST_THRESHOLD_DAYS: ${GHOST_THRESHOLD_DAYS:-21}
+      # The app is same-origin behind nginx, but keep this consistent for dev.
+      FRONTEND_ORIGIN: http://localhost:8080
+    volumes:
+      - applytrack-data:/data
+      # Mount OAuth files from the host (read-only) so the container can sync.
+      # Connect once on the host (`applytrack connect`) to produce token.json.
+      - ./credentials.json:/app/credentials.json:ro
+      - ./token.json:/app/token.json:ro
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  applytrack-data:

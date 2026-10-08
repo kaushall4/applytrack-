@@ -1,0 +1,45 @@
+# Secrets & credentials — never commit
+.env
+credentials.json
+token.json
+
+# Local database (contains your mail snippets — never commit)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Local tool config / helper scripts with machine-specific paths
+.claude/
+*.bat
+debug_*.py
+*_log.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+*.local
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
