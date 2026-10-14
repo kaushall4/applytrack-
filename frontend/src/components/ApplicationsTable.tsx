@@ -5,9 +5,9 @@ import { useMemo, useState } from "react";
 import { useI18n } from "../i18n";
 import { formatDate, relativeTime } from "../lib/format";
 import { ALL_STATUSES, STATUS_META } from "../lib/status";
-import type { Application, Language, Status } from "../lib/types";
+import type { Application, Language, StatusFilter } from "../lib/types";
 import { cn } from "../lib/utils";
-import { StatusBadge } from "./StatusBadge";
+import { hadPastInterview, InterviewedTag, StatusBadge } from "./StatusBadge";
 
 type SortKey = "company" | "role" | "status" | "first_applied_at" | "last_event_at";
 
@@ -21,9 +21,9 @@ const SORT_FIELD: Record<SortKey, keyof Application> = {
 
 interface Props {
   applications: Application[];
-  statusFilter: Status | "";
+  statusFilter: StatusFilter;
   languageFilter: Language | "";
-  onStatusFilter: (s: Status | "") => void;
+  onStatusFilter: (s: StatusFilter) => void;
   onLanguageFilter: (l: Language | "") => void;
   onSelect: (app: Application) => void;
 }
@@ -31,15 +31,18 @@ interface Props {
 function Chip({
   active,
   onClick,
+  title,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  title?: string;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
+      title={title}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
         active
@@ -119,12 +122,22 @@ export function ApplicationsTable({
           <Chip active={statusFilter === ""} onClick={() => onStatusFilter("")}>
             {t.table.all}
           </Chip>
-          {ALL_STATUSES.map((s) => (
-            <Chip key={s} active={statusFilter === s} onClick={() => onStatusFilter(statusFilter === s ? "" : s)}>
-              <span className={cn("h-2 w-2 rounded-full", STATUS_META[s].dot)} />
-              {t.status[s]}
-            </Chip>
-          ))}
+          {ALL_STATUSES.map((s) => {
+            // The interview chip lists every application that had an interview —
+            // also those rejected afterwards — not only the currently open ones.
+            const value: StatusFilter = s === "interview_invite" ? "interviewed" : s;
+            return (
+              <Chip
+                key={s}
+                active={statusFilter === value}
+                title={value === "interviewed" ? t.table.interviewedHint : undefined}
+                onClick={() => onStatusFilter(statusFilter === value ? "" : value)}
+              >
+                <span className={cn("h-2 w-2 rounded-full", STATUS_META[s].dot)} />
+                {value === "interviewed" ? t.table.interviewed : t.status[s]}
+              </Chip>
+            );
+          })}
           <span className="mx-1 h-4 w-px bg-border" />
           {(["de", "en"] as Language[]).map((l) => (
             <Chip key={l} active={languageFilter === l} onClick={() => onLanguageFilter(languageFilter === l ? "" : l)}>
@@ -164,7 +177,10 @@ export function ApplicationsTable({
                   </td>
                   <td className="px-4 py-3 text-muted">{a.role ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={a.current_status} />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <StatusBadge status={a.current_status} />
+                      {hadPastInterview(a) && <InterviewedTag />}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-muted">{formatDate(a.first_applied_at, lang)}</td>
                   <td className="px-4 py-3 text-muted">{relativeTime(a.last_event_at, lang)}</td>

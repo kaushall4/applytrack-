@@ -1,5 +1,5 @@
 import { Plug } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api } from "../api/client";
 import { ApplicationDetail } from "../components/ApplicationDetail";
@@ -10,7 +10,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { StatCardsSkeleton, TableSkeleton } from "../components/ui/Skeleton";
 import { useToast } from "../components/ui/Toast";
 import { useI18n } from "../i18n";
-import type { Application, Language, Stats, Status } from "../lib/types";
+import type { Application, Language, Stats, StatusFilter } from "../lib/types";
 
 export function Dashboard({ onConnect }: { onConnect: () => void }) {
   const { t } = useI18n();
@@ -19,9 +19,16 @@ export function Dashboard({ onConnect }: { onConnect: () => void }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [apps, setApps] = useState<Application[] | null>(null);
   const [allApps, setAllApps] = useState<Application[]>([]);
-  const [statusFilter, setStatusFilter] = useState<Status | "">("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
   const [languageFilter, setLanguageFilter] = useState<Language | "">("");
   const [selected, setSelected] = useState<number | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  // Clicking "Interviews received" lists every application that had one.
+  const showInterviews = () => {
+    setStatusFilter("interviewed");
+    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const load = useCallback(async () => {
     try {
@@ -47,7 +54,15 @@ export function Dashboard({ onConnect }: { onConnect: () => void }) {
 
   return (
     <div className="space-y-6">
-      {stats ? <StatCards stats={stats} /> : <StatCardsSkeleton />}
+      {stats ? (
+        <StatCards
+          stats={stats}
+          onShowInterviews={showInterviews}
+          interviewsActive={statusFilter === "interviewed"}
+        />
+      ) : (
+        <StatCardsSkeleton />
+      )}
 
       {apps === null ? (
         <TableSkeleton />
@@ -69,7 +84,7 @@ export function Dashboard({ onConnect }: { onConnect: () => void }) {
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-1">{allApps.length > 0 && <StatusDonut applications={allApps} />}</div>
-          <div className="lg:col-span-2">
+          <div className="scroll-mt-24 lg:col-span-2" ref={tableRef}>
             <ApplicationsTable
               applications={apps}
               statusFilter={statusFilter}

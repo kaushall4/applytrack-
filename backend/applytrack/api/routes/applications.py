@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ...db import get_session
-from ...models import Application, Email
+from ...models import INTERVIEW_STAGE_INTENTS, Application, Email
 from ...schemas import ApplicationDetailOut, ApplicationOut, StatsOut
 from ...status import Status
 
@@ -23,7 +23,16 @@ _SORTABLE = {
 
 # Statuses that count as "awaiting a response from the company".
 _AWAITING = {Status.APPLICATION_SENT.value, Status.APPLICATION_RECEIVED.value, Status.GHOSTED.value}
-_REACHED_INTERVIEW = {"interview_invite", "next_round", "offer"}
+
+
+def _interviewed_app_ids():
+    """Applications that ever reached an interview / further round / offer —
+    a past interview still counts after a rejection."""
+    effective_intent = func.coalesce(Email.manual_override, Email.intent)
+    return select(Email.application_id).where(
+        Email.application_id.is_not(None),
+        effective_intent.in_(INTERVIEW_STAGE_INTENTS),
+    )
 
 
 @router.get("/stats", response_model=StatsOut)
@@ -38,13 +47,9 @@ def stats(session: Session = Depends(get_session)) -> StatsOut:
     def total(statuses: set[str]) -> int:
         return sum(by_status.get(s, 0) for s in statuses)
 
-    # Interviews = applications that ever reached an interview / further round /
-    # offer, even if a rejection followed — a past interview still counts.
-    effective_intent = func.coalesce(Email.manual_override, Email.intent)
     reached_interview = session.execute(
-        select(func.count(func.distinct(Email.application_id))).where(
-            Email.application_id.is_not(None),
-            effective_intent.in_(_REACHED_INTERVIEW),
+        select(func.count(func.distinct(Application.id))).where(
+            Application.id.in_(_interviewed_app_ids())
         )
     ).scalar_one()
 
@@ -61,14 +66,23 @@ def stats(session: Session = Depends(get_session)) -> StatsOut:
 @router.get("", response_model=list[ApplicationOut])
 def list_applications(
     status: str | None = Query(None, description="Filter by current status."),
+    stage: str | None = Query(
+        None,
+        pattern="^interview$",
+        description="'interview': every application that had an interview, whatever "
+        "happened afterwards (ongoing, rejected, offer).",
+    ),
     language: str | None = Query(None, description="Filter by application language (de/en)."),
     sort: str = Query("last_event_at", description="Sort field."),
     order: str = Query("desc", pattern="^(asc|desc)$"),
     session: Session = Depends(get_session),
 ) -> list[Application]:
-    stmt = select(Application)
+    # Emails are needed for `reached_interview`; load them in one query.
+    stmt = select(Application).options(selectinload(Application.emails))
     if status:
         stmt = stmt.where(Application.current_status == status)
+    if stage == "interview":
+        stmt = stmt.where(Application.id.in_(_interviewed_app_ids()))
     if language:
         stmt = stmt.where(Application.language == language)
 

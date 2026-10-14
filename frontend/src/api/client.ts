@@ -6,7 +6,7 @@ import type {
   Intent,
   Language,
   Stats,
-  Status,
+  StatusFilter,
   SyncResult,
 } from "../lib/types";
 
@@ -47,7 +47,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export interface ApplicationFilters {
-  status?: Status | "";
+  status?: StatusFilter;
   language?: Language | "";
   sort?: string;
   order?: "asc" | "desc";
@@ -72,7 +72,9 @@ export const api = {
   stats: () => request<Stats>("/applications/stats"),
   applications: (filters: ApplicationFilters = {}) => {
     const params = new URLSearchParams();
-    if (filters.status) params.set("status", filters.status);
+    // "interviewed" = every application that had an interview, whatever came after.
+    if (filters.status === "interviewed") params.set("stage", "interview");
+    else if (filters.status) params.set("status", filters.status);
     if (filters.language) params.set("language", filters.language);
     if (filters.sort) params.set("sort", filters.sort);
     if (filters.order) params.set("order", filters.order);

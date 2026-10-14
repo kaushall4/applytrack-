@@ -59,6 +59,9 @@ export const de: Dict = {
     search: "Unternehmen oder Position suchen…",
     sortBy: "Sortieren nach",
     noResults: "Keine Bewerbungen passen zu diesen Filtern.",
+    interviewed: "Gespräche",
+    interviewedHint: "Alle Bewerbungen mit Gespräch — auch mit späterer Absage",
+    interviewedTag: "Gespräch geführt",
   },
 
   detail: {

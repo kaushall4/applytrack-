@@ -48,7 +48,12 @@ export interface Application {
   current_status: Status;
   email_count: number;
   language: Language;
+  /** Had an interview at some point — also when it later ended in a rejection. */
+  reached_interview: boolean;
 }
+
+/** Table filter: a current status, or every application that had an interview. */
+export type StatusFilter = Status | "interviewed" | "";
 
 export interface ApplicationDetail extends Application {
   emails: EmailItem[];

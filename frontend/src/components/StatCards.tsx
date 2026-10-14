@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 
 import { useI18n } from "../i18n";
 import type { Stats } from "../lib/types";
+import { cn } from "../lib/utils";
 
 interface StatDef {
   key: keyof Stats;
@@ -59,7 +60,23 @@ const DEFS: Omit<StatDef, "value">[] = [
   { key: "ghosted", labelKey: "ghosted", icon: Ghost, tint: "text-amber-500 bg-amber-500/10" },
 ];
 
-function StatCard({ def, value, label, index }: { def: Omit<StatDef, "value">; value: number; label: string; index: number }) {
+function StatCard({
+  def,
+  value,
+  label,
+  index,
+  onClick,
+  active = false,
+  hint,
+}: {
+  def: Omit<StatDef, "value">;
+  value: number;
+  label: string;
+  index: number;
+  onClick?: () => void;
+  active?: boolean;
+  hint?: string;
+}) {
   const display = useCountUp(value);
   const Icon = def.icon;
   const [iconTint, iconBg] = def.tint.split(" ");
@@ -69,7 +86,16 @@ function StatCard({ def, value, label, index }: { def: Omit<StatDef, "value">; v
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.35, ease: "easeOut" }}
       whileHover={{ y: -3 }}
-      className="rounded-2xl border border-border bg-surface p-4 shadow-card"
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => (e.key === "Enter" || e.key === " ") && onClick() : undefined}
+      title={hint}
+      className={cn(
+        "rounded-2xl border bg-surface p-4 shadow-card",
+        onClick && "cursor-pointer transition-colors hover:border-brand/50",
+        active ? "border-brand ring-2 ring-brand/30" : "border-border",
+      )}
     >
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted">{label}</span>
@@ -82,13 +108,35 @@ function StatCard({ def, value, label, index }: { def: Omit<StatDef, "value">; v
   );
 }
 
-export function StatCards({ stats }: { stats: Stats }) {
+export function StatCards({
+  stats,
+  onShowInterviews,
+  interviewsActive = false,
+}: {
+  stats: Stats;
+  /** Clicking "Interviews received" lists every application that had one. */
+  onShowInterviews?: () => void;
+  interviewsActive?: boolean;
+}) {
   const labels = useStatLabels();
+  const { t } = useI18n();
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-      {DEFS.map((def, i) => (
-        <StatCard key={def.key} def={def} index={i} value={stats[def.key]} label={labels[def.labelKey]} />
-      ))}
+      {DEFS.map((def, i) => {
+        const isInterviews = def.key === "interviews";
+        return (
+          <StatCard
+            key={def.key}
+            def={def}
+            index={i}
+            value={stats[def.key]}
+            label={labels[def.labelKey]}
+            onClick={isInterviews ? onShowInterviews : undefined}
+            active={isInterviews && interviewsActive}
+            hint={isInterviews ? t.table.interviewedHint : undefined}
+          />
+        );
+      })}
     </div>
   );
 }

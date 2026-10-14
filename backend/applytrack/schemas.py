@@ -37,6 +37,8 @@ class ApplicationOut(BaseModel):
     current_status: str
     email_count: int
     language: str
+    # Had an interview at some point (also when it later ended in a rejection).
+    reached_interview: bool = False
 
 
 class ApplicationDetailOut(ApplicationOut):

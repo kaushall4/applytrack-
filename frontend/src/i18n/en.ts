@@ -58,6 +58,9 @@ export const en = {
     search: "Search company or role…",
     sortBy: "Sort by",
     noResults: "No applications match these filters.",
+    interviewed: "Interviews",
+    interviewedHint: "Every application with an interview — including later rejections",
+    interviewedTag: "Interviewed",
   },
 
   detail: {

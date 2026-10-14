@@ -81,6 +81,24 @@ def test_noise_is_filtered_but_kept(client, seeded):
     assert len(noise) >= 1
 
 
+def test_interview_followed_by_rejection_stays_in_interviews(client, seeded):
+    apps = client.get("/api/applications").json()
+    northwind = next(a for a in apps if "northwind" in a["company"].lower())
+    detail = client.get(f"/api/applications/{northwind['id']}").json()
+    ack = next(e for e in detail["emails"] if e["effective_intent"] == "application_received")
+
+    # Northwind: an interview happened, then the (later) rejection arrived.
+    client.patch(f"/api/emails/{ack['id']}/override", json={"intent": "interview_invite"})
+
+    interviewed = client.get("/api/applications", params={"stage": "interview"}).json()
+    row = next(a for a in interviewed if a["id"] == northwind["id"])
+    assert row["current_status"] == "rejection"  # the outcome is still a rejection …
+    assert row["reached_interview"] is True  # … but the interview is not forgotten
+    # Applications without any interview are not in the list.
+    assert all(a["reached_interview"] for a in interviewed)
+    assert client.get("/api/applications/stats").json()["interviews"] == len(interviewed)
+
+
 def test_override_changes_status(client, seeded):
     apps = client.get("/api/applications").json()
     northwind = next(a for a in apps if "northwind" in a["company"].lower())

@@ -53,6 +53,15 @@ class Application(Base):
         order_by="Email.received_at",
     )
 
+    @property
+    def reached_interview(self) -> bool:
+        """True if an interview happened at any point — even if a rejection followed."""
+        return any(e.effective_intent in INTERVIEW_STAGE_INTENTS for e in self.emails)
+
+
+# Intents meaning "you got (at least) to an interview".
+INTERVIEW_STAGE_INTENTS = frozenset({"interview_invite", "next_round", "offer"})
+
 
 class Email(Base):
     __tablename__ = "emails"
