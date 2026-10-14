@@ -24,9 +24,9 @@ export function Dashboard({ onConnect }: { onConnect: () => void }) {
   const [selected, setSelected] = useState<number | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
-  // Clicking "Interviews received" lists every application that had one.
-  const showInterviews = () => {
-    setStatusFilter("interviewed");
+  // Clicking a stat card shows exactly the applications it counts.
+  const selectCard = (filter: StatusFilter) => {
+    setStatusFilter(filter);
     tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -55,11 +55,7 @@ export function Dashboard({ onConnect }: { onConnect: () => void }) {
   return (
     <div className="space-y-6">
       {stats ? (
-        <StatCards
-          stats={stats}
-          onShowInterviews={showInterviews}
-          interviewsActive={statusFilter === "interviewed"}
-        />
+        <StatCards stats={stats} activeFilter={statusFilter} onSelect={selectCard} />
       ) : (
         <StatCardsSkeleton />
       )}
@@ -83,8 +79,11 @@ export function Dashboard({ onConnect }: { onConnect: () => void }) {
         />
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-1">{allApps.length > 0 && <StatusDonut applications={allApps} />}</div>
-          <div className="scroll-mt-24 lg:col-span-2" ref={tableRef}>
+          {/* On phones the list comes first; the chart moves below it. */}
+          <div className="order-2 lg:order-1 lg:col-span-1">
+            {allApps.length > 0 && <StatusDonut applications={allApps} />}
+          </div>
+          <div className="order-1 scroll-mt-24 lg:order-2 lg:col-span-2" ref={tableRef}>
             <ApplicationsTable
               applications={apps}
               statusFilter={statusFilter}

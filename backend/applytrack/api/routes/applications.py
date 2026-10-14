@@ -68,9 +68,10 @@ def list_applications(
     status: str | None = Query(None, description="Filter by current status."),
     stage: str | None = Query(
         None,
-        pattern="^interview$",
+        pattern="^(interview|awaiting)$",
         description="'interview': every application that had an interview, whatever "
-        "happened afterwards (ongoing, rejected, offer).",
+        "happened afterwards (ongoing, rejected, offer). 'awaiting': still waiting for "
+        "an answer (sent, acknowledged or ghosted).",
     ),
     language: str | None = Query(None, description="Filter by application language (de/en)."),
     sort: str = Query("last_event_at", description="Sort field."),
@@ -83,6 +84,8 @@ def list_applications(
         stmt = stmt.where(Application.current_status == status)
     if stage == "interview":
         stmt = stmt.where(Application.id.in_(_interviewed_app_ids()))
+    elif stage == "awaiting":
+        stmt = stmt.where(Application.current_status.in_(_AWAITING))
     if language:
         stmt = stmt.where(Application.language == language)
 

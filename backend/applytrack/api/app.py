@@ -21,9 +21,14 @@ from fastapi.staticfiles import StaticFiles
 from ..config import get_settings
 from ..db import init_db
 from ..gmail.auth import AccountMismatchError, GmailAuthError, SessionExpiredError
-from .routes import account, applications, emails, sync
+from ..mobile import KEY_HEADER, is_local_client, key_is_valid
+from .routes import account, applications, emails, mobile, sync
 
 logger = logging.getLogger("applytrack.api")
+
+# Actions that only make sense on the PC (OAuth opens a browser there; pairing
+# shows the secret key).
+_PC_ONLY_PATHS = ("/api/account/connect", "/api/account/disconnect", "/api/mobile")
 
 
 def _frontend_dist() -> Path | None:
@@ -91,6 +96,29 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # --- Phone access guard ---
+    # Requests from this PC are trusted. Any other device (your phone in the
+    # home Wi-Fi) must send the pairing key; account/pairing actions stay PC-only.
+    @app.middleware("http")
+    async def _phone_guard(request: Request, call_next):
+        path = request.url.path
+        if path.startswith("/api/") and path != "/api/health":
+            client = request.client.host if request.client else None
+            if not is_local_client(client):
+                if path.startswith(_PC_ONLY_PATHS):
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "Only available on the PC running ApplyTrack.",
+                                 "code": "pc_only"},
+                    )
+                if not key_is_valid(request.headers.get(KEY_HEADER)):
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "This device is not paired with ApplyTrack yet.",
+                                 "code": "pairing_required"},
+                    )
+        return await call_next(request)
+
     # --- Error handlers: friendly JSON, no stack traces in responses ---
     @app.exception_handler(AccountMismatchError)
     async def _mismatch(_: Request, exc: AccountMismatchError) -> JSONResponse:
@@ -122,6 +150,7 @@ def create_app() -> FastAPI:
     app.include_router(sync.router)
     app.include_router(applications.router)
     app.include_router(emails.router)
+    app.include_router(mobile.router)
 
     # Serve the built SPA last so it never shadows the API routes above.
     _mount_frontend(app)

@@ -62,7 +62,7 @@ def test_rejected_refresh_is_expired(expired_token):
 
 
 def test_account_status_reports_expired_session(expired_token, remembered_account):
-    data = TestClient(create_app()).get("/api/account").json()
+    data = TestClient(create_app(), client=("127.0.0.1", 50000)).get("/api/account").json()
     assert data["connected"] is False
     assert data["session_expired"] is True
     # The address is kept so the UI can offer a one-click reconnect.
@@ -70,6 +70,6 @@ def test_account_status_reports_expired_session(expired_token, remembered_accoun
 
 
 def test_sync_with_expired_session_returns_401(expired_token):
-    resp = TestClient(create_app()).post("/api/sync")
+    resp = TestClient(create_app(), client=("127.0.0.1", 50000)).post("/api/sync")
     assert resp.status_code == 401
     assert resp.json()["code"] == "session_expired"

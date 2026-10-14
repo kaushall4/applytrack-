@@ -52,8 +52,11 @@ export interface Application {
   reached_interview: boolean;
 }
 
-/** Table filter: a current status, or every application that had an interview. */
-export type StatusFilter = Status | "interviewed" | "";
+/**
+ * Table filter: a current status, "interviewed" (every application that had an
+ * interview, also if rejected afterwards) or "awaiting" (still waiting for a reply).
+ */
+export type StatusFilter = Status | "interviewed" | "awaiting" | "";
 
 export interface ApplicationDetail extends Application {
   emails: EmailItem[];
@@ -81,4 +84,13 @@ export interface SyncResult {
   classified: number;
   applications: number;
   message: string;
+}
+
+export interface MobileStatus {
+  /** The running app listens in the home Wi-Fi, so a phone can connect. */
+  enabled: boolean;
+  /** Phone access was switched on; ApplyTrack needs a restart first. */
+  restart_required: boolean;
+  url: string | null;
+  qr_svg: string | null;
 }

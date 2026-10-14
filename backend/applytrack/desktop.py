@@ -20,6 +20,7 @@ import uvicorn
 
 from .api.app import _frontend_dist
 from .api.app import app as fastapi_app
+from .config import get_settings
 
 logger = logging.getLogger("applytrack.desktop")
 
@@ -61,10 +62,16 @@ def run_desktop(*, width: int = 1280, height: int = 860) -> None:
             "directory first (this produces frontend/dist)."
         )
 
-    port = _free_port()
+    settings = get_settings()
+    if settings.mobile_access:
+        # Phone app enabled: listen in the home network on a fixed port so the
+        # installed phone app always finds the PC (pairing key still required).
+        host, port = "0.0.0.0", settings.mobile_port
+    else:
+        host, port = "127.0.0.1", _free_port()
     base_url = f"http://127.0.0.1:{port}"
 
-    config = uvicorn.Config(fastapi_app, host="127.0.0.1", port=port, log_level="warning")
+    config = uvicorn.Config(fastapi_app, host=host, port=port, log_level="warning")
     server = _ThreadedServer(config)
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()

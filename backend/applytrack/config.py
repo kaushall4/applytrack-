@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     # as not-application-related, e.g. recruiting agencies: "agency.example,acme-hr.example".
     ignored_senders: str = ""
 
+    # --- Phone app (installable web app on your home Wi-Fi) ---
+    # Off by default: the server then only listens on this PC. When on, it is
+    # reachable in the local network, but every /api call from another device
+    # needs the secret pairing key (scanned as a QR code from the desktop app).
+    mobile_access: bool = False
+    mobile_port: int = 8765
+    mobile_key_file: str = "mobile_access.key"
+
     @property
     def llm_enabled(self) -> bool:
         """LLM classification is available only when an API key is configured."""

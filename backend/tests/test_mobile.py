@@ -1,0 +1,84 @@
+"""Phone access: pairing-key guard and the PC-only pairing endpoints."""
+
+from __future__ import annotations
+
+from fastapi.testclient import TestClient
+
+from applytrack import mobile
+from applytrack.api.app import create_app
+
+LOCAL = ("127.0.0.1", 50000)
+PHONE = ("192.168.1.42", 50000)
+
+
+def test_local_client_detection():
+    assert mobile.is_local_client("127.0.0.1")
+    assert mobile.is_local_client("::1")
+    assert not mobile.is_local_client("192.168.1.42")
+    assert not mobile.is_local_client("testclient")
+    assert not mobile.is_local_client(None)
+
+
+def test_pc_needs_no_key():
+    resp = TestClient(create_app(), client=LOCAL).get("/api/applications")
+    assert resp.status_code == 200
+
+
+def test_phone_without_key_is_rejected():
+    resp = TestClient(create_app(), client=PHONE).get("/api/applications")
+    assert resp.status_code == 401
+    assert resp.json()["code"] == "pairing_required"
+
+
+def test_phone_with_wrong_key_is_rejected():
+    client = TestClient(create_app(), client=PHONE)
+    resp = client.get("/api/applications", headers={mobile.KEY_HEADER: "nope"})
+    assert resp.status_code == 401
+
+
+def test_phone_with_key_is_allowed():
+    client = TestClient(create_app(), client=PHONE)
+    key = mobile.get_or_create_key()
+    resp = client.get("/api/applications", headers={mobile.KEY_HEADER: key})
+    assert resp.status_code == 200
+
+
+def test_health_is_open_for_the_phone():
+    assert TestClient(create_app(), client=PHONE).get("/api/health").status_code == 200
+
+
+def test_pairing_and_account_actions_stay_on_the_pc():
+    client = TestClient(create_app(), client=PHONE)
+    headers = {mobile.KEY_HEADER: mobile.get_or_create_key()}
+    assert client.get("/api/mobile", headers=headers).status_code == 403
+    resp = client.post("/api/account/disconnect", headers=headers)
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "pc_only"
+
+
+def test_mobile_status_disabled_by_default():
+    data = TestClient(create_app(), client=LOCAL).get("/api/mobile").json()
+    assert data == {"enabled": False, "restart_required": False, "url": None, "qr_svg": None}
+
+
+def test_key_is_stable():
+    assert mobile.get_or_create_key() == mobile.get_or_create_key()
+
+
+def test_enable_in_env_adds_and_replaces(tmp_path, monkeypatch):
+    env = tmp_path / ".env"
+    env.write_text("IGNORED_SENDERS=example.com\nMOBILE_ACCESS=false\n", encoding="utf-8")
+    monkeypatch.setenv("MOBILE_ACCESS", "false")
+    mobile.enable_in_env(str(env))
+    text = env.read_text(encoding="utf-8")
+    assert "MOBILE_ACCESS=true" in text and "MOBILE_ACCESS=false" not in text
+    assert "IGNORED_SENDERS=example.com" in text
+
+    fresh = tmp_path / "new.env"
+    mobile.enable_in_env(str(fresh))
+    assert "MOBILE_ACCESS=true" in fresh.read_text(encoding="utf-8")
+
+
+def test_qr_svg_renders():
+    svg = mobile.qr_svg("http://192.168.1.10:8765/?key=abc")
+    assert svg.lstrip().startswith("<svg")

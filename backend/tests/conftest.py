@@ -24,6 +24,8 @@ os.environ["ANTHROPIC_API_KEY"] = ""
 _TMP = Path(tempfile.gettempdir())
 os.environ["GOOGLE_TOKEN_FILE"] = str(_TMP / "applytrack_test_token.json")
 os.environ["GOOGLE_CREDENTIALS_FILE"] = str(_TMP / "applytrack_test_credentials.json")
+os.environ["MOBILE_KEY_FILE"] = str(_TMP / "applytrack_test_mobile.key")
+os.environ["MOBILE_ACCESS"] = "false"
 
 import pytest  # noqa: E402
 

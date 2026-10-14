@@ -149,6 +149,22 @@ The container mounts `credentials.json` and `token.json` from the repository roo
 (read-only) — run `applytrack connect` once on the host and copy both files there.
 The database lives on the `applytrack-data` volume.
 
+### Phone app (free, no app store)
+
+ApplyTrack can be installed on your phone as a web app (PWA) that reads the data
+straight from your PC over your home Wi-Fi — nothing is hosted in the cloud.
+
+1. In the desktop app click **Phone** → **Turn on phone access**, then restart ApplyTrack.
+   If Windows asks about the firewall, allow *private networks*.
+2. Click **Phone** again and scan the QR code with your phone (same Wi-Fi).
+3. Install it: Android/Chrome → menu ⋮ → *Add to Home screen*;
+   iPhone/Safari → Share → *Add to Home Screen*.
+
+The QR code carries a secret pairing key; requests from other devices without it are
+rejected, and connecting/disconnecting Gmail stays PC-only. The phone app works while
+the PC is on and ApplyTrack is running. (`applytrack serve --lan` does the same without
+the desktop window.)
+
 ### CLI
 
 | Command | Purpose |
@@ -158,7 +174,7 @@ The database lives on the `applytrack-data` volume.
 | `applytrack sync [--full]` | Pull and classify new mail |
 | `applytrack reclassify` | Re-run classification + grouping on stored mail (keeps overrides) |
 | `applytrack app` | Desktop window |
-| `applytrack serve` | API server only (`--reload` for dev) |
+| `applytrack serve` | API server only (`--reload` for dev, `--lan` for the phone app) |
 | `applytrack status` | Table of applications in the terminal |
 | `applytrack seed` | Load the sample dataset |
 
@@ -176,6 +192,8 @@ See [`.env.example`](.env.example).
 | `GHOST_THRESHOLD_DAYS` | `21` | Days without reply before "ghosted" |
 | `REVIEW_CONFIDENCE_THRESHOLD` | `0.6` | Below this, emails land in "Needs review" |
 | `IGNORED_SENDERS` | – | Comma-separated senders/domains to treat as noise |
+| `MOBILE_ACCESS` | `false` | Listen in the home network for the phone app |
+| `MOBILE_PORT` | `8765` | Port the phone app connects to |
 
 ## Development
 
@@ -197,6 +215,8 @@ Contributions: see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Everything stays on your machine. `credentials.json`, `token.json`, `.env` and the
   database are git-ignored. Full email bodies are never stored or logged (only a
   500-character excerpt).
+- Phone access is off by default; when on, every request from another device must carry
+  the pairing key (stored in the git-ignored `mobile_access.key`).
 - See [`PRIVACY.md`](PRIVACY.md).
 
 ## License

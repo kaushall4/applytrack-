@@ -11,7 +11,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { useI18n } from "../i18n";
-import type { Stats } from "../lib/types";
+import type { Stats, StatusFilter } from "../lib/types";
 import { cn } from "../lib/utils";
 
 interface StatDef {
@@ -108,22 +108,32 @@ function StatCard({
   );
 }
 
+// The table filter each card opens.
+const CARD_FILTER: Record<keyof Stats, StatusFilter> = {
+  total_applied: "",
+  awaiting_response: "awaiting",
+  interviews: "interviewed",
+  offers: "offer",
+  rejections: "rejection",
+  ghosted: "ghosted",
+};
+
 export function StatCards({
   stats,
-  onShowInterviews,
-  interviewsActive = false,
+  activeFilter,
+  onSelect,
 }: {
   stats: Stats;
-  /** Clicking "Interviews received" lists every application that had one. */
-  onShowInterviews?: () => void;
-  interviewsActive?: boolean;
+  activeFilter?: StatusFilter;
+  /** Clicking a card filters the table to the applications it counts. */
+  onSelect?: (filter: StatusFilter) => void;
 }) {
   const labels = useStatLabels();
   const { t } = useI18n();
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
       {DEFS.map((def, i) => {
-        const isInterviews = def.key === "interviews";
+        const filter = CARD_FILTER[def.key];
         return (
           <StatCard
             key={def.key}
@@ -131,9 +141,9 @@ export function StatCards({
             index={i}
             value={stats[def.key]}
             label={labels[def.labelKey]}
-            onClick={isInterviews ? onShowInterviews : undefined}
-            active={isInterviews && interviewsActive}
-            hint={isInterviews ? t.table.interviewedHint : undefined}
+            onClick={onSelect ? () => onSelect(filter) : undefined}
+            active={activeFilter !== undefined && activeFilter === filter && filter !== ""}
+            hint={def.key === "interviews" ? t.table.interviewedHint : undefined}
           />
         );
       })}

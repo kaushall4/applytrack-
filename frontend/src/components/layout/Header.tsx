@@ -1,5 +1,14 @@
 import { motion } from "framer-motion";
-import { KeyRound, LayoutDashboard, ListChecks, MailX, Plug, RefreshCw, Unplug } from "lucide-react";
+import {
+  KeyRound,
+  LayoutDashboard,
+  ListChecks,
+  MailX,
+  Plug,
+  RefreshCw,
+  Smartphone,
+  Unplug,
+} from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
 import { useI18n } from "../../i18n";
@@ -17,6 +26,8 @@ interface HeaderProps {
   onConnect: () => void;
   onReconnect: () => void;
   onDisconnect: () => void;
+  /** Opens the phone pairing dialog; omitted on the phone itself. */
+  onPhone?: () => void;
 }
 
 const NAV = [
@@ -87,6 +98,7 @@ export function Header({
   onConnect,
   onReconnect,
   onDisconnect,
+  onPhone,
 }: HeaderProps) {
   const { t } = useI18n();
   const connected = account?.connected ?? false;
@@ -95,7 +107,7 @@ export function Header({
   const initial = (senderName(address) || address || "?").charAt(0).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border glass">
+    <header className="sticky top-0 z-30 border-b border-border pt-[env(safe-area-inset-top)] glass">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
         <Brand />
 
@@ -112,13 +124,15 @@ export function Header({
               <span className="max-w-[170px] truncate text-xs font-medium" title={address}>
                 {address}
               </span>
-              <button
-                onClick={onDisconnect}
-                title={t.header.disconnect}
-                className="text-muted transition-colors hover:text-rose-500"
-              >
-                <Unplug className="h-3.5 w-3.5" />
-              </button>
+              {onPhone && (
+                <button
+                  onClick={onDisconnect}
+                  title={t.header.disconnect}
+                  className="text-muted transition-colors hover:text-rose-500"
+                >
+                  <Unplug className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           ) : expired ? (
             <button
@@ -154,6 +168,17 @@ export function Header({
             >
               <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
               <span className="hidden lg:inline">{syncing ? t.header.syncing : t.header.sync}</span>
+            </button>
+          )}
+
+          {onPhone && (
+            <button
+              onClick={onPhone}
+              title={t.phone.title}
+              className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium transition-colors hover:bg-surface-2"
+            >
+              <Smartphone className="h-4 w-4" />
+              <span className="hidden lg:inline">{t.phone.button}</span>
             </button>
           )}
 

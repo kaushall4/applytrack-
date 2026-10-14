@@ -146,11 +146,19 @@ def serve(
     host: str = typer.Option("127.0.0.1", help="Bind host."),
     port: int = typer.Option(8000, help="Bind port."),
     reload: bool = typer.Option(False, "--reload", help="Auto-reload (dev)."),
+    lan: bool = typer.Option(
+        False, "--lan", help="Reachable from your phone in the home Wi-Fi (pairing key required)."
+    ),
 ) -> None:
     """Run the ApplyTrack API server."""
     import uvicorn
 
-    get_settings()  # validate config early
+    settings = get_settings()  # validate config early
+    if lan:
+        from .mobile import pairing_url
+
+        host, port = "0.0.0.0", settings.mobile_port
+        console.print(f"Phone app: open [bold]{pairing_url() or 'http://<this-pc-ip>:' + str(port)}[/]")
     uvicorn.run("applytrack.api.app:app", host=host, port=port, reload=reload)
 
 

@@ -12,7 +12,7 @@ from applytrack.sample_data.loader import load_sample_data
 
 @pytest.fixture
 def client():
-    return TestClient(create_app())
+    return TestClient(create_app(), client=("127.0.0.1", 50000))
 
 
 @pytest.fixture

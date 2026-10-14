@@ -2,6 +2,7 @@
 .env
 credentials.json
 token.json
+*.key
 
 # Local database (contains your mail snippets — never commit)
 *.db

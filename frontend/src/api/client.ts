@@ -5,6 +5,7 @@ import type {
   EmailItem,
   Intent,
   Language,
+  MobileStatus,
   Stats,
   StatusFilter,
   SyncResult,
@@ -14,32 +15,65 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** Machine-readable reason, e.g. "session_expired" or "pairing_required". */
+    readonly code?: string,
   ) {
     super(message);
     this.name = "ApiError";
   }
 }
 
+// --- Phone pairing ---------------------------------------------------------
+// The phone receives the secret key once through the QR code (`/?key=…`); it is
+// kept on the device and sent with every request. The PC itself needs no key.
+const KEY_STORAGE = "applytrack.key";
+const KEY_HEADER = "X-ApplyTrack-Key";
+
+function readKey(): string | null {
+  try {
+    return localStorage.getItem(KEY_STORAGE);
+  } catch {
+    return null;
+  }
+}
+
+/** Store a key from the pairing link and remove it from the address bar. */
+export function capturePairingKey(): void {
+  const url = new URL(window.location.href);
+  const key = url.searchParams.get("key");
+  if (!key) return;
+  try {
+    localStorage.setItem(KEY_STORAGE, key);
+  } catch {
+    /* storage blocked — the key still works for this visit via the URL */
+  }
+  url.searchParams.delete("key");
+  window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const key = readKey();
+  if (key) headers[KEY_HEADER] = key;
+
   let resp: Response;
   try {
-    resp = await fetch(`/api${path}`, {
-      headers: { "Content-Type": "application/json" },
-      ...init,
-    });
+    resp = await fetch(`/api${path}`, { headers, ...init });
   } catch {
     throw new ApiError("Network error — is the backend running?", 0);
   }
 
   if (!resp.ok) {
     let detail = `Request failed (${resp.status})`;
+    let code: string | undefined;
     try {
       const body = await resp.json();
       if (body?.detail) detail = body.detail;
+      if (typeof body?.code === "string") code = body.code;
     } catch {
       /* non-JSON error body — keep generic message */
     }
-    throw new ApiError(detail, resp.status);
+    throw new ApiError(detail, resp.status, code);
   }
 
   if (resp.status === 204) return undefined as T;
@@ -64,6 +98,10 @@ export const api = {
   disconnect: () =>
     request<{ message: string }>("/account/disconnect", { method: "POST" }),
 
+  // Phone app (PC only)
+  mobileStatus: () => request<MobileStatus>("/mobile"),
+  enableMobile: () => request<MobileStatus>("/mobile/enable", { method: "POST" }),
+
   // Sync
   sync: (full = false) =>
     request<SyncResult>(`/sync?full=${full}`, { method: "POST" }),
@@ -72,8 +110,10 @@ export const api = {
   stats: () => request<Stats>("/applications/stats"),
   applications: (filters: ApplicationFilters = {}) => {
     const params = new URLSearchParams();
-    // "interviewed" = every application that had an interview, whatever came after.
+    // "interviewed" = every application that had an interview, whatever came after;
+    // "awaiting" = still waiting for an answer. Both are server-side stages.
     if (filters.status === "interviewed") params.set("stage", "interview");
+    else if (filters.status === "awaiting") params.set("stage", "awaiting");
     else if (filters.status) params.set("status", filters.status);
     if (filters.language) params.set("language", filters.language);
     if (filters.sort) params.set("sort", filters.sort);

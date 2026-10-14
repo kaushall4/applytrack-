@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { useI18n } from "../i18n";
@@ -44,7 +44,7 @@ function Chip({
       onClick={onClick}
       title={title}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:py-1",
         active
           ? "border-brand bg-brand text-brand-fg shadow-sm"
           : "border-border bg-surface text-muted hover:text-fg hover:border-brand/40",
@@ -118,10 +118,17 @@ export function ApplicationsTable({
             className="h-10 w-full rounded-xl border border-border bg-bg pl-9 pr-3 text-sm outline-none transition-shadow focus:ring-2 focus:ring-brand/40"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
+        {/* Swipeable single row on phones, wrapping on larger screens. */}
+        <div className="-mx-3.5 flex items-center gap-1.5 overflow-x-auto px-3.5 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
           <Chip active={statusFilter === ""} onClick={() => onStatusFilter("")}>
             {t.table.all}
           </Chip>
+          {statusFilter === "awaiting" && (
+            <Chip active onClick={() => onStatusFilter("")}>
+              {t.stats.awaiting}
+              <X className="h-3 w-3" />
+            </Chip>
+          )}
           {ALL_STATUSES.map((s) => {
             // The interview chip lists every application that had an interview —
             // also those rejected afterwards — not only the currently open ones.
@@ -150,7 +157,36 @@ export function ApplicationsTable({
       {rows.length === 0 ? (
         <div className="px-4 py-12 text-center text-sm text-muted">{t.table.noResults}</div>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Phone: one tappable card per application. */}
+        <ul className="divide-y divide-border/60 md:hidden">
+          {rows.map((a) => (
+            <li key={a.id}>
+              <button
+                onClick={() => onSelect(a)}
+                className="flex w-full flex-col gap-1.5 px-4 py-3.5 text-left active:bg-surface-2/70"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span className="font-semibold">{a.company}</span>
+                  <span className="shrink-0 text-xs text-muted">
+                    {relativeTime(a.last_event_at, lang)}
+                  </span>
+                </div>
+                {a.role && <span className="text-sm text-muted">{a.role}</span>}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <StatusBadge status={a.current_status} />
+                  {hadPastInterview(a) && <InterviewedTag />}
+                  <span className="ml-auto text-[11px] text-muted">
+                    {t.table.applied} {formatDate(a.first_applied_at, lang)}
+                  </span>
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        {/* Tablet / desktop: sortable table. */}
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs text-muted">
@@ -194,6 +230,7 @@ export function ApplicationsTable({
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );
