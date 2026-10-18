@@ -60,6 +60,8 @@ export const en = {
     codeSubmit: "Pair",
     codeWrong: "Wrong or expired code — reopen “Phone” on the PC.",
     iphoneTip: "Important: open it in Safari and choose “Add to Home Screen” there.",
+    cloudScanHint: "Works on any network — Wi-Fi or mobile data.",
+    cloudNote: "Runs in the free cloud: even while this laptop is off. After a longer pause the first start can take up to a minute.",
   },
 
   stats: {

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 
 import { api, ApiError } from "./api/client";
@@ -17,6 +17,10 @@ import { Review } from "./pages/Review";
 
 // Opened on this PC (desktop window / localhost) vs. on a paired phone.
 const ON_PC = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
+
+// The cloud copy has no scheduler (it sleeps while unused), so the phone
+// catches up with Gmail when the app is opened and the data is older than this.
+const AUTO_SYNC_AFTER_MS = 15 * 60 * 1000;
 
 const isPairingError = (err: unknown) =>
   err instanceof ApiError && err.code === "pairing_required";
@@ -80,6 +84,17 @@ export function App() {
       setSyncing(false);
     }
   };
+
+  const autoSynced = useRef(false);
+  useEffect(() => {
+    if (ON_PC || autoSynced.current || !account?.connected) return;
+    const last = account.last_synced_at ? Date.parse(account.last_synced_at) : 0;
+    if (Date.now() - last < AUTO_SYNC_AFTER_MS) return;
+    autoSynced.current = true;
+    void handleSync();
+    // handleSync is recreated every render; run only when the account arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account]);
 
   // One-click reconnect with the remembered address (Google pre-selects it).
   const handleReconnect = async () => {

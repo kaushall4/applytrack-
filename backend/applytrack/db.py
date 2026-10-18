@@ -21,14 +21,30 @@ class Base(DeclarativeBase):
     """Declarative base for all ORM models."""
 
 
-def _make_engine():
-    settings = get_settings()
-    url = settings.database_url
+def normalize_url(url: str) -> str:
+    """Accept the plain ``postgres(ql)://`` URLs hosts hand out (Neon, Render)
+    and route them to the psycopg 3 driver."""
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
+def make_engine(url: str):
+    url = normalize_url(url)
     connect_args = {}
+    kwargs = {}
     if url.startswith("sqlite"):
         # SQLite + FastAPI's threadpool need this; harmless otherwise.
         connect_args["check_same_thread"] = False
-    return create_engine(url, connect_args=connect_args, future=True)
+    else:
+        # Serverless Postgres (e.g. Neon) drops idle connections; check first.
+        kwargs["pool_pre_ping"] = True
+    return create_engine(url, connect_args=connect_args, future=True, **kwargs)
+
+
+def _make_engine():
+    return make_engine(get_settings().database_url)
 
 
 engine = _make_engine()

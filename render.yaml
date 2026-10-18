@@ -1,0 +1,20 @@
+# One-click cloud copy of ApplyTrack on Render's free plan
+# (Dashboard → New → Blueprint → this repository).
+# Data: an external Postgres such as Neon's free plan — run `applytrack cloud-setup`
+# on your PC first; it copies your data and Gmail sign-in into that database.
+services:
+  - type: web
+    name: applytrack
+    runtime: docker
+    plan: free
+    dockerfilePath: ./docker/cloud.Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Same connection string you gave `applytrack cloud-setup`.
+      - key: DATABASE_URL
+        sync: false
+      # Optional: comma-separated senders to ignore (same as in your local .env).
+      - key: IGNORED_SENDERS
+        sync: false

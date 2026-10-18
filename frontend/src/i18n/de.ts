@@ -61,6 +61,8 @@ export const de: Dict = {
     codeSubmit: "Verbinden",
     codeWrong: "Code falsch oder abgelaufen — am PC «Handy» neu öffnen.",
     iphoneTip: "Wichtig: in Safari öffnen und von dort «Zum Home-Bildschirm» wählen.",
+    cloudScanHint: "Funktioniert in jedem Netz — WLAN oder Mobilfunk.",
+    cloudNote: "Läuft in der Gratis-Cloud: auch wenn dieser Laptop aus ist. Nach längerer Pause braucht der erste Start bis zu einer Minute.",
   },
 
   stats: {

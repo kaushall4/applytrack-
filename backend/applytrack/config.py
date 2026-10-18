@@ -46,6 +46,15 @@ class Settings(BaseSettings):
     mobile_access: bool = False
     mobile_port: int = 8765
     mobile_key_file: str = "mobile_access.key"
+    # Optional fixed pairing key (otherwise generated and kept in the database).
+    mobile_key: str | None = None
+
+    # --- Cloud copy (phone app without the laptop) ---
+    # On the cloud server: no request is ever "from this PC", so every call
+    # needs the pairing key and PC-only actions are unavailable.
+    cloud_mode: bool = False
+    # On the PC: public address of the cloud copy, used for the phone QR code.
+    cloud_url: str | None = None
 
     @property
     def llm_enabled(self) -> bool:

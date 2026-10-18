@@ -119,7 +119,9 @@ function Paired({ status, onCopy }: { status: MobileStatus; onCopy: () => void }
       <div className="min-w-0 space-y-4 text-sm">
         <div>
           <p className="font-semibold">{t.phone.scan}</p>
-          <p className="mt-0.5 text-muted">{t.phone.scanHint}</p>
+          <p className="mt-0.5 text-muted">
+            {status.cloud ? t.phone.cloudScanHint : t.phone.scanHint}
+          </p>
         </div>
         <div>
           <p className="font-semibold">{t.phone.install}</p>
@@ -129,7 +131,7 @@ function Paired({ status, onCopy }: { status: MobileStatus; onCopy: () => void }
           </ul>
           <p className="mt-1 text-xs text-muted">{t.phone.iphoneTip}</p>
         </div>
-        <p className="text-xs text-muted">{t.phone.note}</p>
+        <p className="text-xs text-muted">{status.cloud ? t.phone.cloudNote : t.phone.note}</p>
       </div>
 
       <div className="min-w-0 sm:col-span-2">

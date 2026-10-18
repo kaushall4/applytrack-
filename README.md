@@ -165,6 +165,24 @@ rejected, and connecting/disconnecting Gmail stays PC-only. The phone app works 
 the PC is on and ApplyTrack is running. (`applytrack serve --lan` does the same without
 the desktop window.)
 
+### Phone app without the PC (free cloud copy)
+
+Keep ApplyTrack reachable while your laptop is off, still at no cost:
+
+1. Create a free Postgres database on [Neon](https://neon.com) and copy its connection string.
+2. On the PC run `applytrack cloud-setup` and paste it. Your data, the Gmail sign-in and the
+   pairing key are copied there; the desktop app switches to the same database (the local
+   SQLite file stays as a backup).
+3. On [Render](https://render.com): *New → Blueprint* → this repository (uses
+   [`render.yaml`](render.yaml), free plan). Enter the same connection string as `DATABASE_URL`.
+4. `applytrack cloud-url https://<your-service>.onrender.com`, restart the desktop app, click
+   **Phone** and scan the QR code.
+
+The cloud copy accepts no request without the pairing key, cannot connect or disconnect
+Gmail, and syncs when you open the app. Free instances sleep when unused, so the first
+start after a pause takes up to a minute. Note that your Gmail token and mail excerpts then
+live with these providers.
+
 ### CLI
 
 | Command | Purpose |
@@ -174,6 +192,8 @@ the desktop window.)
 | `applytrack sync [--full]` | Pull and classify new mail |
 | `applytrack reclassify` | Re-run classification + grouping on stored mail (keeps overrides) |
 | `applytrack app` | Desktop window |
+| `applytrack cloud-setup` | Copy data + Gmail sign-in to a cloud Postgres (phone app without the PC) |
+| `applytrack cloud-url URL` | Point the phone QR code at the cloud copy |
 | `applytrack serve` | API server only (`--reload` for dev, `--lan` for the phone app) |
 | `applytrack status` | Table of applications in the terminal |
 | `applytrack seed` | Load the sample dataset |
@@ -194,6 +214,8 @@ See [`.env.example`](.env.example).
 | `IGNORED_SENDERS` | – | Comma-separated senders/domains to treat as noise |
 | `MOBILE_ACCESS` | `false` | Listen in the home network for the phone app |
 | `MOBILE_PORT` | `8765` | Port the phone app connects to |
+| `CLOUD_URL` | – | Address of the cloud copy (phone QR code) |
+| `CLOUD_MODE` | `false` | Set in the cloud image: every request needs the pairing key |
 
 ## Development
 

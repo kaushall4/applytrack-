@@ -141,6 +141,61 @@ def desktop() -> None:
         raise typer.Exit(code=1) from exc
 
 
+@app.command("cloud-setup")
+def cloud_setup(
+    database_url: str = typer.Option(
+        ...,
+        prompt="Paste the Neon connection string (postgresql://…)",
+        hide_input=True,
+        help="Cloud Postgres connection string.",
+    ),
+    overwrite: bool = typer.Option(False, "--overwrite", help="Replace data already in the cloud."),
+) -> None:
+    """Copy your data to a cloud database so the phone app works without this PC."""
+    from .cloud import (
+        CloudSetupError,
+        check_postgres_url,
+        copy_database,
+        set_env_values,
+        store_shared_secrets,
+    )
+    from .mobile import get_or_create_key
+
+    settings = get_settings()
+    init_db()
+    try:
+        url = check_postgres_url(database_url)
+        console.print("Copying data to the cloud database …")
+        copied = copy_database(settings.database_url, url, overwrite=overwrite)
+        store_shared_secrets(url, token_file=settings.google_token_file, key=get_or_create_key())
+    except CloudSetupError as exc:
+        console.print(f"[bold red]✗[/] {exc}")
+        raise typer.Exit(code=1) from exc
+    except Exception as exc:  # noqa: BLE001 — show a short reason, never the URL
+        console.print(f"[bold red]✗[/] Could not reach the cloud database: {type(exc).__name__}")
+        raise typer.Exit(code=1) from exc
+
+    # The desktop app now uses the same database as the cloud copy.
+    set_env_values({"LOCAL_DATABASE_URL": settings.database_url, "DATABASE_URL": url})
+    console.print(
+        f"[bold green]✓[/] Copied {copied.get('emails', 0)} email(s) and "
+        f"{copied.get('applications', 0)} application(s). This PC now uses the cloud database "
+        "(the old local file stays as a backup)."
+    )
+
+
+@app.command("cloud-url")
+def cloud_url(url: str = typer.Argument(..., help="e.g. https://applytrack.onrender.com")) -> None:
+    """Remember the cloud address so the desktop app shows its QR code."""
+    from .cloud import set_env_values
+
+    if not url.startswith("https://"):
+        console.print("[bold red]✗[/] Use the https:// address of your cloud copy.")
+        raise typer.Exit(code=1)
+    set_env_values({"CLOUD_URL": url.rstrip("/")})
+    console.print(f"[bold green]✓[/] Phone QR code now points to {url}. Restart ApplyTrack.")
+
+
 @app.command()
 def serve(
     host: str = typer.Option("127.0.0.1", help="Bind host."),

@@ -111,3 +111,20 @@ class SyncState(Base):
     email_address: Mapped[str | None] = mapped_column(String(512), nullable=True)
     last_history_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AppSecret(Base):
+    """Small key/value store for state shared by the PC and the cloud copy.
+
+    Holds the Gmail OAuth token, the phone pairing key and the short pairing
+    code, so a cloud deployment that shares the database needs no extra setup.
+    Lives in the (git-ignored / private) database, never in the repository.
+    """
+
+    __tablename__ = "app_secrets"
+
+    name: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )

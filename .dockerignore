@@ -10,7 +10,8 @@
 frontend/dist/
 
 # Local secrets & data (never bake into images)
-.env
+**/.env
+**/*.key
 **/credentials.json
 **/token.json
 **/*.db

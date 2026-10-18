@@ -88,7 +88,7 @@ def test_qr_svg_renders():
 
 
 def _reset_code():
-    mobile._pair_code = None
+    mobile.delete_secret(mobile.PAIR_CODE)
 
 
 def test_pair_code_trades_for_key(monkeypatch):

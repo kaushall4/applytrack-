@@ -96,4 +96,6 @@ export interface MobileStatus {
   /** Short code to type into the installed app if the QR key didn't carry over. */
   pair_code: string | null;
   pair_code_expires_in: number | null;
+  /** The QR code points at the cloud copy (works while the PC is off). */
+  cloud: boolean;
 }

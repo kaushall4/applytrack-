@@ -68,7 +68,7 @@ def _credentials_path() -> str:
 def _load_credentials() -> tuple[CredentialStatus, Credentials | None]:
     """Load the cached token, refreshing (and re-saving) it when needed."""
     path = _token_path()
-    if not os.path.exists(path):
+    if not os.path.exists(path) and not _restore_token_from_db(path):
         return "missing", None
     try:
         creds = Credentials.from_authorized_user_file(path, SCOPES)
@@ -103,9 +103,28 @@ def _load_cached_credentials() -> Credentials | None:
     return _load_credentials()[1]
 
 
+def _restore_token_from_db(path: str) -> bool:
+    """Recreate token.json from the shared database (cloud copy / new machine)."""
+    from ..secret_store import GMAIL_TOKEN, get_secret
+
+    token = get_secret(GMAIL_TOKEN)
+    if not token:
+        return False
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(token)
+    return True
+
+
 def _save_credentials(creds: Credentials) -> None:
+    from ..secret_store import GMAIL_TOKEN, set_secret
+
+    token = creds.to_json()
     with open(_token_path(), "w", encoding="utf-8") as fh:
-        fh.write(creds.to_json())
+        fh.write(token)
+    try:
+        set_secret(GMAIL_TOKEN, token)
+    except Exception as exc:  # noqa: BLE001 — the local file is enough to keep working
+        logger.warning("Could not store token in the database: %s", type(exc).__name__)
 
 
 def _profile_address(creds: Credentials) -> str:
@@ -189,9 +208,13 @@ def connect_account(intended_address: str, *, open_browser: bool = True) -> str:
 
 def disconnect_account() -> bool:
     """Delete the cached token. Returns True if a token was removed."""
+    from ..secret_store import GMAIL_TOKEN, delete_secret, get_secret
+
     path = _token_path()
+    had_db_token = get_secret(GMAIL_TOKEN) is not None
+    delete_secret(GMAIL_TOKEN)
     if os.path.exists(path):
         os.remove(path)
         logger.info("Disconnected Gmail account (token removed).")
         return True
-    return False
+    return had_db_token

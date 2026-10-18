@@ -22,6 +22,8 @@ class MobileStatusOut(BaseModel):
     restart_required: bool = False
     url: str | None = None
     qr_svg: str | None = None
+    # The QR code points at the cloud copy (works without the PC).
+    cloud: bool = False
     # Short code to type into the installed app if the QR key didn't carry over.
     pair_code: str | None = None
     pair_code_expires_in: int | None = None
@@ -29,7 +31,8 @@ class MobileStatusOut(BaseModel):
 
 @router.get("", response_model=MobileStatusOut)
 def mobile_status() -> MobileStatusOut:
-    if not get_settings().mobile_access:
+    settings = get_settings()
+    if not settings.mobile_access and not settings.cloud_url:
         # Switched on during this run (written to .env) → waiting for a restart.
         pending = os.environ.get("MOBILE_ACCESS", "").lower() == "true"
         return MobileStatusOut(enabled=False, restart_required=pending)
@@ -41,13 +44,14 @@ def mobile_status() -> MobileStatusOut:
         qr_svg=qr_svg(url) if url else None,
         pair_code=code,
         pair_code_expires_in=expires_in,
+        cloud=bool(settings.cloud_url),
     )
 
 
 @router.post("/enable", response_model=MobileStatusOut)
 def enable_mobile() -> MobileStatusOut:
     """Switch phone access on (written to .env; active after a restart)."""
-    if get_settings().mobile_access:
+    if get_settings().mobile_access or get_settings().cloud_url:
         return mobile_status()
     enable_in_env()
     return MobileStatusOut(enabled=False, restart_required=True)
@@ -64,7 +68,8 @@ class PairOut(BaseModel):
 @pair_router.post("", response_model=PairOut)
 def pair(body: PairIn) -> PairOut:
     """Trade the short code shown on the PC for the pairing key."""
-    if not get_settings().mobile_access:
+    settings = get_settings()
+    if not (settings.mobile_access or settings.cloud_mode):
         raise HTTPException(status_code=404, detail="Phone access is switched off.")
     key = redeem_pair_code(body.code)
     if key is None:
