@@ -145,7 +145,7 @@ export function Header({
               <span className="hidden sm:inline">{t.header.sessionExpired} ·</span>
               {reconnecting ? t.header.reconnecting : t.header.reconnect}
             </button>
-          ) : (
+          ) : onPhone ? (
             <button
               onClick={onConnect}
               className="flex items-center gap-1.5 rounded-xl bg-brand px-3 py-1.5 text-sm font-medium text-brand-fg shadow-sm transition-opacity hover:opacity-90"
@@ -153,7 +153,7 @@ export function Header({
               <Plug className="h-4 w-4" />
               {t.header.connect}
             </button>
-          )}
+          ) : null}
 
           {connected && (
             <button

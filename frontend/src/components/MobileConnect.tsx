@@ -127,6 +127,7 @@ function Paired({ status, onCopy }: { status: MobileStatus; onCopy: () => void }
             <li>{t.phone.android}</li>
             <li>{t.phone.iphone}</li>
           </ul>
+          <p className="mt-1 text-xs text-muted">{t.phone.iphoneTip}</p>
         </div>
         <p className="text-xs text-muted">{t.phone.note}</p>
       </div>
@@ -148,6 +149,18 @@ function Paired({ status, onCopy }: { status: MobileStatus; onCopy: () => void }
           {t.phone.secret}
         </p>
       </div>
+
+      {status.pair_code && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-border bg-surface-2/50 p-3 sm:col-span-2">
+          <div>
+            <p className="text-xs text-muted">{t.phone.codeLabel}</p>
+            <p className="font-mono text-2xl font-bold tracking-[0.3em]">
+              {status.pair_code.slice(0, 3)} {status.pair_code.slice(3)}
+            </p>
+          </div>
+          <p className="min-w-0 flex-1 text-xs text-muted">{t.phone.codeHint}</p>
+        </div>
+      )}
     </div>
   );
 }

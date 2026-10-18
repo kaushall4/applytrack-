@@ -55,6 +55,12 @@ export const de: Dict = {
     pairTitle: "Dieses Handy ist noch nicht verbunden",
     pairBody: "Öffne ApplyTrack am PC, tippe auf «Handy» und scanne den QR-Code mit diesem Handy.",
     retry: "Erneut versuchen",
+    codeLabel: "Kopplungscode",
+    codeHint: "Zeigt die installierte App «nicht verbunden», tippe dort diesen Code ein. Gültig 10 Minuten.",
+    codePrompt: "Oder den 6-stelligen Kopplungscode eingeben, der am PC unter «Handy» steht:",
+    codeSubmit: "Verbinden",
+    codeWrong: "Code falsch oder abgelaufen — am PC «Handy» neu öffnen.",
+    iphoneTip: "Wichtig: in Safari öffnen und von dort «Zum Home-Bildschirm» wählen.",
   },
 
   stats: {

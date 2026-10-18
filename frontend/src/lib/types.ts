@@ -93,4 +93,7 @@ export interface MobileStatus {
   restart_required: boolean;
   url: string | null;
   qr_svg: string | null;
+  /** Short code to type into the installed app if the QR key didn't carry over. */
+  pair_code: string | null;
+  pair_code_expires_in: number | null;
 }

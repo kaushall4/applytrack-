@@ -58,7 +58,8 @@ def test_pairing_and_account_actions_stay_on_the_pc():
 
 def test_mobile_status_disabled_by_default():
     data = TestClient(create_app(), client=LOCAL).get("/api/mobile").json()
-    assert data == {"enabled": False, "restart_required": False, "url": None, "qr_svg": None}
+    assert data["enabled"] is False and data["restart_required"] is False
+    assert data["url"] is None and data["pair_code"] is None
 
 
 def test_key_is_stable():
@@ -84,3 +85,40 @@ def test_qr_svg_renders():
     assert svg.lstrip().startswith("<svg")
     # Must scale to its container rather than be cropped.
     assert "viewBox" in svg and 'width="' not in svg.split(">", 1)[0]
+
+
+def _reset_code():
+    mobile._pair_code = None
+
+
+def test_pair_code_trades_for_key(monkeypatch):
+    monkeypatch.setattr("applytrack.api.routes.mobile.get_settings",
+                        lambda: type("S", (), {"mobile_access": True})())
+    _reset_code()
+    code, ttl = mobile.current_pair_code()
+    assert len(code) == 6 and code.isdigit() and ttl > 0
+    phone = TestClient(create_app(), client=PHONE)
+    resp = phone.post("/api/pair", json={"code": code})
+    assert resp.status_code == 200
+    assert resp.json()["key"] == mobile.get_or_create_key()
+    # Single use.
+    assert phone.post("/api/pair", json={"code": code}).status_code == 400
+
+
+def test_pair_code_dies_after_wrong_guesses(monkeypatch):
+    monkeypatch.setattr("applytrack.api.routes.mobile.get_settings",
+                        lambda: type("S", (), {"mobile_access": True})())
+    _reset_code()
+    code, _ = mobile.current_pair_code()
+    wrong = f"{(int(code) + 1) % 10**6:06d}"
+    phone = TestClient(create_app(), client=PHONE)
+    for _ in range(mobile.PAIR_CODE_MAX_FAILURES):
+        assert phone.post("/api/pair", json={"code": wrong}).status_code == 400
+    assert phone.post("/api/pair", json={"code": code}).status_code == 400
+
+
+def test_pairing_off_when_phone_access_disabled():
+    _reset_code()
+    code, _ = mobile.current_pair_code()
+    resp = TestClient(create_app(), client=PHONE).post("/api/pair", json={"code": code})
+    assert resp.status_code == 404

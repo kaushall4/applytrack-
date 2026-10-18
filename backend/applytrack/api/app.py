@@ -7,6 +7,7 @@ toasts.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from collections.abc import AsyncIterator
@@ -29,6 +30,8 @@ logger = logging.getLogger("applytrack.api")
 # Actions that only make sense on the PC (OAuth opens a browser there; pairing
 # shows the secret key).
 _PC_ONLY_PATHS = ("/api/account/connect", "/api/account/disconnect", "/api/mobile")
+# Reachable without the key: liveness and trading a short code for the key.
+_OPEN_PATHS = ("/api/health", "/api/pair")
 
 
 def _frontend_dist() -> Path | None:
@@ -64,6 +67,16 @@ def _mount_frontend(app: FastAPI) -> None:
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
     index = dist / "index.html"
+    manifest = dist / "manifest.webmanifest"
+
+    @app.get("/manifest.webmanifest", include_in_schema=False)
+    def web_manifest(key: str | None = None) -> JSONResponse:
+        # A paired phone asks for its manifest with the key so the home-screen
+        # app starts already paired (iOS gives it storage separate from Safari).
+        data = json.loads(manifest.read_text(encoding="utf-8")) if manifest.is_file() else {}
+        if key and key_is_valid(key):
+            data["start_url"] = f"/?key={key}"
+        return JSONResponse(data, media_type="application/manifest+json")
 
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa(full_path: str) -> FileResponse:
@@ -102,7 +115,7 @@ def create_app() -> FastAPI:
     @app.middleware("http")
     async def _phone_guard(request: Request, call_next):
         path = request.url.path
-        if path.startswith("/api/") and path != "/api/health":
+        if path.startswith("/api/") and path not in _OPEN_PATHS:
             client = request.client.host if request.client else None
             if not is_local_client(client):
                 if path.startswith(_PC_ONLY_PATHS):
@@ -151,6 +164,7 @@ def create_app() -> FastAPI:
     app.include_router(applications.router)
     app.include_router(emails.router)
     app.include_router(mobile.router)
+    app.include_router(mobile.pair_router)
 
     # Serve the built SPA last so it never shadows the API routes above.
     _mount_frontend(app)

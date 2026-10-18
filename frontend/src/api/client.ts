@@ -37,18 +37,44 @@ function readKey(): string | null {
   }
 }
 
-/** Store a key from the pairing link and remove it from the address bar. */
-export function capturePairingKey(): void {
-  const url = new URL(window.location.href);
-  const key = url.searchParams.get("key");
-  if (!key) return;
+const isStandalone = () =>
+  window.matchMedia?.("(display-mode: standalone)").matches ||
+  (navigator as Navigator & { standalone?: boolean }).standalone === true;
+
+export function storePairingKey(key: string): void {
   try {
     localStorage.setItem(KEY_STORAGE, key);
   } catch {
-    /* storage blocked — the key still works for this visit via the URL */
+    /* storage blocked — pairing will not survive a restart */
   }
-  url.searchParams.delete("key");
-  window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  pointManifestAtKey(key);
+}
+
+// An app added to the iPhone home screen gets storage separate from Safari, so
+// the key has to travel inside its start URL: the manifest is requested with
+// the key and the server answers with `start_url: /?key=…`.
+function pointManifestAtKey(key: string): void {
+  const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+  if (link) link.href = `/manifest.webmanifest?key=${encodeURIComponent(key)}`;
+}
+
+/** Pick up the key from the pairing link (`/?key=…`) and keep it on the device. */
+export function capturePairingKey(): void {
+  const url = new URL(window.location.href);
+  const key = url.searchParams.get("key");
+  if (key) {
+    storePairingKey(key);
+    // In Safari the key stays in the address bar on purpose: "Add to Home
+    // Screen" may use the current URL as the app's start page. Inside the
+    // installed app it is no longer needed there.
+    if (isStandalone()) {
+      url.searchParams.delete("key");
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    }
+    return;
+  }
+  const stored = readKey();
+  if (stored) pointManifestAtKey(stored);
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -101,6 +127,8 @@ export const api = {
   // Phone app (PC only)
   mobileStatus: () => request<MobileStatus>("/mobile"),
   enableMobile: () => request<MobileStatus>("/mobile/enable", { method: "POST" }),
+  pair: (code: string) =>
+    request<{ key: string }>("/pair", { method: "POST", body: JSON.stringify({ code }) }),
 
   // Sync
   sync: (full = false) =>

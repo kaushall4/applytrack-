@@ -15,6 +15,9 @@ import os
 import re
 import secrets
 import socket
+import threading
+import time
+from dataclasses import dataclass
 from pathlib import Path
 
 from .config import get_settings
@@ -52,6 +55,53 @@ def get_or_create_key() -> str:
 
 def key_is_valid(candidate: str | None) -> bool:
     return bool(candidate) and hmac.compare_digest(candidate, get_or_create_key())
+
+
+# --- Short pairing code -------------------------------------------------------
+# An app added to the iPhone home screen gets its own storage, separate from
+# Safari. If the key from the QR link doesn't make it across, the user types a
+# short code shown on the PC instead. Codes live in memory only, expire after
+# a few minutes and die after a handful of wrong guesses.
+PAIR_CODE_TTL = 10 * 60
+PAIR_CODE_MAX_FAILURES = 5
+
+
+@dataclass
+class _PairCode:
+    code: str
+    expires_at: float
+    failures: int = 0
+
+
+_pair_code: _PairCode | None = None
+_pair_lock = threading.Lock()
+
+
+def current_pair_code() -> tuple[str, int]:
+    """The active code and its remaining seconds (a new one when expired/used)."""
+    global _pair_code
+    with _pair_lock:
+        now = time.monotonic()
+        if _pair_code is None or _pair_code.expires_at <= now:
+            _pair_code = _PairCode(f"{secrets.randbelow(10**6):06d}", now + PAIR_CODE_TTL)
+        return _pair_code.code, int(_pair_code.expires_at - now)
+
+
+def redeem_pair_code(candidate: str) -> str | None:
+    """Exchange a valid code for the pairing key; the code is single-use."""
+    global _pair_code
+    candidate = "".join(ch for ch in candidate if ch.isdigit())
+    with _pair_lock:
+        pc = _pair_code
+        if pc is None or pc.expires_at <= time.monotonic():
+            return None
+        if not hmac.compare_digest(candidate, pc.code):
+            pc.failures += 1
+            if pc.failures >= PAIR_CODE_MAX_FAILURES:
+                _pair_code = None
+            return None
+        _pair_code = None
+    return get_or_create_key()
 
 
 def lan_ip() -> str | None:

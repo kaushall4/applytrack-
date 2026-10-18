@@ -54,6 +54,12 @@ export const en = {
     pairTitle: "This phone isn't paired yet",
     pairBody: "Open ApplyTrack on your PC, tap “Phone” and scan the QR code with this phone.",
     retry: "Try again",
+    codeLabel: "Pairing code",
+    codeHint: "If the installed app says “not paired”, type this code there. Valid for 10 minutes.",
+    codePrompt: "Or enter the 6-digit pairing code shown on the PC under “Phone”:",
+    codeSubmit: "Pair",
+    codeWrong: "Wrong or expired code — reopen “Phone” on the PC.",
+    iphoneTip: "Important: open it in Safari and choose “Add to Home Screen” there.",
   },
 
   stats: {
