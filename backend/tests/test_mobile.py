@@ -82,3 +82,5 @@ def test_enable_in_env_adds_and_replaces(tmp_path, monkeypatch):
 def test_qr_svg_renders():
     svg = mobile.qr_svg("http://192.168.1.10:8765/?key=abc")
     assert svg.lstrip().startswith("<svg")
+    # Must scale to its container rather than be cropped.
+    assert "viewBox" in svg and 'width="' not in svg.split(">", 1)[0]

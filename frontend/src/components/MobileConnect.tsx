@@ -110,7 +110,7 @@ function Paired({ status, onCopy }: { status: MobileStatus; onCopy: () => void }
     <div className="grid gap-6 sm:grid-cols-[auto,1fr]">
       <div className="flex flex-col items-center gap-2">
         <div
-          className="w-48 overflow-hidden rounded-xl bg-white p-1 shadow-sm ring-1 ring-border [&>svg]:h-auto [&>svg]:w-full"
+          className="w-60 rounded-xl bg-white p-2 shadow-sm ring-1 ring-border [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
           // QR code generated locally by the backend (segno) — static SVG markup.
           dangerouslySetInnerHTML={{ __html: status.qr_svg }}
         />
