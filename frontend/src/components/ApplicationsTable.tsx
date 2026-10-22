@@ -7,7 +7,7 @@ import { formatDate, relativeTime } from "../lib/format";
 import { ALL_STATUSES, STATUS_META } from "../lib/status";
 import type { Application, Language, StatusFilter } from "../lib/types";
 import { cn } from "../lib/utils";
-import { hadPastInterview, InterviewedTag, StatusBadge } from "./StatusBadge";
+import { InterviewedTag, StatusBadge } from "./StatusBadge";
 
 type SortKey = "company" | "role" | "status" | "first_applied_at" | "last_event_at";
 
@@ -130,14 +130,21 @@ export function ApplicationsTable({
             </Chip>
           )}
           {ALL_STATUSES.map((s) => {
-            // The interview chip lists every application that had an interview —
-            // also those rejected afterwards — not only the currently open ones.
-            const value: StatusFilter = s === "interview_invite" ? "interviewed" : s;
+            // Interview and next-round chips list every application that got
+            // there — also those rejected afterwards — not only the open ones.
+            const value: StatusFilter =
+              s === "interview_invite" ? "interviewed" : s === "next_round" ? "advanced" : s;
+            const hint =
+              value === "interviewed"
+                ? t.table.interviewedHint
+                : value === "advanced"
+                  ? t.table.advancedHint
+                  : undefined;
             return (
               <Chip
                 key={s}
                 active={statusFilter === value}
-                title={value === "interviewed" ? t.table.interviewedHint : undefined}
+                title={hint}
                 onClick={() => onStatusFilter(statusFilter === value ? "" : value)}
               >
                 <span className={cn("h-2 w-2 rounded-full", STATUS_META[s].dot)} />
@@ -175,7 +182,7 @@ export function ApplicationsTable({
                 {a.role && <span className="text-sm text-muted">{a.role}</span>}
                 <div className="flex flex-wrap items-center gap-1.5">
                   <StatusBadge status={a.current_status} />
-                  {hadPastInterview(a) && <InterviewedTag />}
+                  <InterviewedTag app={a} />
                   <span className="ml-auto text-[11px] text-muted">
                     {t.table.applied} {formatDate(a.first_applied_at, lang)}
                   </span>
@@ -215,7 +222,7 @@ export function ApplicationsTable({
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <StatusBadge status={a.current_status} />
-                      {hadPastInterview(a) && <InterviewedTag />}
+                      <InterviewedTag app={a} />
                     </div>
                   </td>
                   <td className="px-4 py-3 text-muted">{formatDate(a.first_applied_at, lang)}</td>

@@ -13,16 +13,26 @@ export function hadPastInterview(app: Pick<Application, "reached_interview" | "c
   return app.reached_interview && !INTERVIEW_STATUSES.includes(app.current_status);
 }
 
-/** Small marker shown next to the status: "Gespräch geführt" / "Interviewed". */
-export function InterviewedTag() {
+type RoundInfo = Pick<Application, "reached_interview" | "current_status" | "interview_rounds">;
+
+/**
+ * Marker next to the status that keeps the interview history visible:
+ * "Gespräch geführt" after a past interview, "2. Runde erreicht" once a job got
+ * past the first round — also when it ended in a rejection.
+ */
+export function InterviewedTag({ app }: { app: RoundInfo }) {
   const { t } = useI18n();
+  const rounds = app.interview_rounds ?? 0;
+  const label =
+    rounds >= 2 ? t.table.roundTag(rounds) : hadPastInterview(app) ? t.table.interviewedTag : null;
+  if (!label) return null;
   return (
     <span
-      title={t.table.interviewedHint}
+      title={rounds >= 2 ? t.table.advancedHint : t.table.interviewedHint}
       className="inline-flex items-center gap-1 rounded-full border border-indigo-300/70 px-2 py-0.5 text-[11px] font-medium text-indigo-600 dark:border-indigo-400/30 dark:text-indigo-300"
     >
       <CalendarCheck className="h-3 w-3" />
-      {t.table.interviewedTag}
+      {label}
     </span>
   );
 }

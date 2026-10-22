@@ -95,6 +95,8 @@ export const en = {
     interviewed: "Interviews",
     interviewedHint: "Every application with an interview — including later rejections",
     interviewedTag: "Interviewed",
+    roundTag: (n: number) => `Reached round ${n}`,
+    advancedHint: "Every application that reached a further round — including later rejections",
   },
 
   detail: {

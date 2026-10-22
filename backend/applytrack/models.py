@@ -58,6 +58,13 @@ class Application(Base):
         """True if an interview happened at any point — even if a rejection followed."""
         return any(e.effective_intent in INTERVIEW_STAGE_INTENTS for e in self.emails)
 
+    @property
+    def interview_rounds(self) -> int:
+        """Interview rounds reached for this job (kept after a rejection)."""
+        from .rounds import count_interview_rounds
+
+        return count_interview_rounds(self.emails)
+
 
 # Intents meaning "you got (at least) to an interview".
 INTERVIEW_STAGE_INTENTS = frozenset({"interview_invite", "next_round", "offer"})

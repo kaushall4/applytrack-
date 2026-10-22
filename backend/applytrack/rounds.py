@@ -50,12 +50,8 @@ def _starts_new_round(email: Email, round_start: datetime, round_threads: set[st
     )
 
 
-def mark_interview_rounds(emails: Iterable[Email]) -> int:
-    """Re-label later-round invitations of one job as ``next_round``.
-
-    ``emails`` are all mails of a single application. Manual overrides are left
-    alone. Returns how many mails were re-labelled.
-    """
+def _round_openers(emails: Iterable[Email]) -> list[Email]:
+    """The mail that opened each interview round of one job, in order."""
     stage = sorted(
         (
             e
@@ -64,19 +60,38 @@ def mark_interview_rounds(emails: Iterable[Email]) -> int:
         ),
         key=lambda e: _aware(e.received_at),
     )
-    changed = 0
+    openers: list[Email] = []
     round_start: datetime | None = None
     round_threads: set[str] = set()
     for email in stage:
-        if round_start is None:
+        if round_start is None or _starts_new_round(email, round_start, round_threads):
+            openers.append(email)
             round_start, round_threads = _aware(email.received_at), {email.thread_id}
-            continue
-        if _starts_new_round(email, round_start, round_threads):
-            round_start, round_threads = _aware(email.received_at), {email.thread_id}
-            if email.intent == "interview_invite" and not email.manual_override:
-                email.intent = "next_round"
-                email.reasoning = NEXT_ROUND_REASON
-                changed += 1
         else:
             round_threads.add(email.thread_id)
+    return openers
+
+
+def count_interview_rounds(emails: Iterable[Email]) -> int:
+    """How many interview rounds this job reached (0 = none)."""
+    openers = _round_openers(emails)
+    # A "next round" mail without an earlier invitation on record still means
+    # at least a second round.
+    if openers and openers[0].effective_intent == "next_round":
+        return len(openers) + 1
+    return len(openers)
+
+
+def mark_interview_rounds(emails: Iterable[Email]) -> int:
+    """Re-label later-round invitations of one job as ``next_round``.
+
+    ``emails`` are all mails of a single application. Manual overrides are left
+    alone. Returns how many mails were re-labelled.
+    """
+    changed = 0
+    for email in _round_openers(emails)[1:]:
+        if email.intent == "interview_invite" and not email.manual_override:
+            email.intent = "next_round"
+            email.reasoning = NEXT_ROUND_REASON
+            changed += 1
     return changed

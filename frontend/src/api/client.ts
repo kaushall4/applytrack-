@@ -142,6 +142,8 @@ export const api = {
     // "awaiting" = still waiting for an answer. Both are server-side stages.
     if (filters.status === "interviewed") params.set("stage", "interview");
     else if (filters.status === "awaiting") params.set("stage", "awaiting");
+    // "advanced" = got past the first interview, also if rejected afterwards.
+    else if (filters.status === "advanced") params.set("stage", "next_round");
     else if (filters.status) params.set("status", filters.status);
     if (filters.language) params.set("language", filters.language);
     if (filters.sort) params.set("sort", filters.sort);

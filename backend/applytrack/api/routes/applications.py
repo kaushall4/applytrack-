@@ -35,6 +35,15 @@ def _interviewed_app_ids():
     )
 
 
+def _next_round_app_ids():
+    """Applications that ever got past the first interview (also if rejected later)."""
+    effective_intent = func.coalesce(Email.manual_override, Email.intent)
+    return select(Email.application_id).where(
+        Email.application_id.is_not(None),
+        effective_intent.in_(("next_round", "offer")),
+    )
+
+
 @router.get("/stats", response_model=StatsOut)
 def stats(session: Session = Depends(get_session)) -> StatsOut:
     rows = session.execute(
@@ -68,7 +77,7 @@ def list_applications(
     status: str | None = Query(None, description="Filter by current status."),
     stage: str | None = Query(
         None,
-        pattern="^(interview|awaiting)$",
+        pattern="^(interview|awaiting|next_round)$",
         description="'interview': every application that had an interview, whatever "
         "happened afterwards (ongoing, rejected, offer). 'awaiting': still waiting for "
         "an answer (sent, acknowledged or ghosted).",
@@ -84,6 +93,8 @@ def list_applications(
         stmt = stmt.where(Application.current_status == status)
     if stage == "interview":
         stmt = stmt.where(Application.id.in_(_interviewed_app_ids()))
+    elif stage == "next_round":
+        stmt = stmt.where(Application.id.in_(_next_round_app_ids()))
     elif stage == "awaiting":
         stmt = stmt.where(Application.current_status.in_(_AWAITING))
     if language:

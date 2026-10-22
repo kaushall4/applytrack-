@@ -39,6 +39,8 @@ class ApplicationOut(BaseModel):
     language: str
     # Had an interview at some point (also when it later ended in a rejection).
     reached_interview: bool = False
+    # Interview rounds reached (2 = got to a second round), also after a rejection.
+    interview_rounds: int = 0
 
 
 class ApplicationDetailOut(ApplicationOut):

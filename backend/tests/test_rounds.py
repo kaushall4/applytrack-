@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from applytrack.models import Email
-from applytrack.rounds import mark_interview_rounds
+from applytrack.rounds import count_interview_rounds, mark_interview_rounds
 
 
 def _mail(day: str, subject: str, intent: str, thread: str, direction: str = "received",
@@ -92,3 +92,21 @@ def test_manual_override_is_respected():
     ]
     assert mark_interview_rounds(mails) == 0
     assert mails[1].intent == "interview_invite"
+
+
+def test_round_count_survives_a_rejection():
+    # UBP: interview, then "im Prozess weitermachen" + a further interview, then rejection.
+    mails = [
+        _mail("2026-08-13T08:00", "UBP Interview", "interview_invite", "a"),
+        _mail("2026-09-09T14:00", "UBP", "next_round", "b"),
+        _mail("2026-09-10T15:49", "RE: UBP", "next_round", "b"),
+        _mail("2026-09-15T20:07", "RE: Rückfrage zum weiteren Ablauf", "next_round", "c"),
+        _mail("2026-09-21T13:35", "UBP - Follow-up", "rejection", "d"),
+    ]
+    assert count_interview_rounds(mails) == 2
+
+
+def test_round_count_basics():
+    assert count_interview_rounds([]) == 0
+    assert count_interview_rounds([_mail("2026-01-01T08:00", "Interview", "interview_invite", "a")]) == 1
+    assert count_interview_rounds([_mail("2026-01-01T08:00", "Next steps", "next_round", "a")]) == 2

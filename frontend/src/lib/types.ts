@@ -50,13 +50,15 @@ export interface Application {
   language: Language;
   /** Had an interview at some point — also when it later ended in a rejection. */
   reached_interview: boolean;
+  /** Interview rounds reached (2 = second round), kept after a rejection. */
+  interview_rounds: number;
 }
 
 /**
  * Table filter: a current status, "interviewed" (every application that had an
  * interview, also if rejected afterwards) or "awaiting" (still waiting for a reply).
  */
-export type StatusFilter = Status | "interviewed" | "awaiting" | "";
+export type StatusFilter = Status | "interviewed" | "advanced" | "awaiting" | "";
 
 export interface ApplicationDetail extends Application {
   emails: EmailItem[];

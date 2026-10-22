@@ -96,6 +96,8 @@ export const de: Dict = {
     interviewed: "Gespräche",
     interviewedHint: "Alle Bewerbungen mit Gespräch — auch mit späterer Absage",
     interviewedTag: "Gespräch geführt",
+    roundTag: (n: number) => `${n}. Runde erreicht`,
+    advancedHint: "Alle Bewerbungen mit einer weiteren Runde — auch mit späterer Absage",
   },
 
   detail: {
