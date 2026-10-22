@@ -55,7 +55,13 @@ FRAGMENTS: dict[Intent, list[str]] = {
         "another candidate", "decided to move forward with", "unable to offer",
         "not be moving ahead", "were not selected", "will not be progressing",
         "not have the best fit", "not the best fit", "not the right fit",
-        "unable to consider",
+        "unable to consider", "not be moving forward", "will not be moving",
+        "not meet the eligibility", "do not meet the", "does not meet the",
+        "have not been successful", "has not been successful", "were unsuccessful",
+        "was unsuccessful",
+        # Farewells that close a process ("wünschen dir weiterhin viel Erfolg").
+        "weiterhin viel erfolg", "beruflichen zukunft", "beruflichen werdegang alles gute",
+        "every success in your", "best of luck in your", "success in your future",
     ],
     Intent.OFFER: [
         # DE
@@ -175,6 +181,23 @@ _CONDITION_SENSITIVE = {Intent.INTERVIEW_INVITE, Intent.NEXT_ROUND}
 _SUBJECT_INTERVIEW_RE = re.compile(r"\binterview|gespraech\b|vorstellungsgespraech")
 
 
+# Rejections often end with a perk: "we are pleased to offer you free access to
+# mentoring", "...a place in our talent community". Offer cues in such sentences
+# are never a job offer.
+_OFFER_NOISE_RE = re.compile(
+    r"mentor|free access|talent (pool|community|network)|job alert|newsletter|webinar|"
+    r"career (journey|support|resources)|discount|kostenlos|talentpool|karriere-?newsletter"
+)
+# Polite phrasing that is only an offer when nothing in the mail says no.
+_GENERIC_OFFER_FRAGMENTS = {"pleased to offer", "we would like to offer"}
+
+
+def _offer_sentences(folded: str) -> str:
+    return " ".join(
+        s for s in _SENTENCE_SPLIT_RE.split(folded) if s and not _OFFER_NOISE_RE.search(s)
+    )
+
+
 def _unconditional_sentences(folded: str) -> str:
     return " ".join(
         s for s in _SENTENCE_SPLIT_RE.split(folded) if s and not _CONDITIONAL_RE.search(s)
@@ -185,12 +208,26 @@ def matched_fragments(text: str) -> dict[Intent, list[str]]:
     """Return, per intent, the list of fragments found in ``text``."""
     folded = fold(text)
     unconditional = _unconditional_sentences(folded)
+    offer_text = _offer_sentences(folded)
     hits: dict[Intent, list[str]] = {}
     for intent, fragments in FRAGMENTS.items():
-        haystack = unconditional if intent in _CONDITION_SENSITIVE else folded
+        if intent in _CONDITION_SENSITIVE:
+            haystack = unconditional
+        elif intent is Intent.OFFER:
+            haystack = offer_text
+        else:
+            haystack = folded
         found = [f for f in fragments if f in haystack]
         if found:
             hits[intent] = found
+    # A real offer never also says no; generic "pleased to offer" next to a
+    # rejection is a consolation perk, not a job.
+    if Intent.REJECTION in hits and Intent.OFFER in hits:
+        specific = [f for f in hits[Intent.OFFER] if f not in _GENERIC_OFFER_FRAGMENTS]
+        if specific:
+            hits[Intent.OFFER] = specific
+        else:
+            del hits[Intent.OFFER]
     return hits
 
 

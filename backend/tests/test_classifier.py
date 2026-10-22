@@ -153,6 +153,71 @@ def test_best_fit_rejection():
     assert _classify("Your application with PIMCO", body) == "rejection"
 
 
+def test_rejection_with_mentoring_perk_is_not_an_offer():
+    # Real Schroders wording: ineligible + "pleased to offer you free access to mentoring".
+    body = (
+        "Based on the information provided in your pre-screening responses, it appears that "
+        "you do not meet the eligibility criteria required. As a result, we will not be moving "
+        "forwards with your application on this occasion. While you have not been successful on "
+        "this occasion, we would still like to support your career journey. As part of your "
+        "application with Schroders, we are pleased to offer you free access to mentoring."
+    )
+    assert _classify("Working Student - 2193 at Schroders", body) == "rejection"
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "We will not be moving forward with your application.",
+        "Unfortunately you do not meet the minimum requirements for this role.",
+        "We are pleased to offer you a place in our talent community.",
+    ],
+)
+def test_more_rejection_and_perk_wording(body):
+    assert _classify("Your application", body) != "offer"
+
+
+def test_real_offer_still_wins():
+    body = ("We are pleased to offer you the position of Analyst. "
+            "Please find your employment contract attached.")
+    assert _classify("Offer", body) == "offer"
+
+
+def test_quoted_history_does_not_decide_the_intent():
+    # The new part is an invitation; the quoted older mail below is a rejection.
+    body = (
+        "Dear Kaushall, we would like to invite you to a first interview next week.\n\n"
+        "On Mon, 12 Oct 2026 at 09:00, HR <hr@example.com> wrote:\n"
+        "> Unfortunately we will not proceed with your application."
+    )
+    assert _classify("Interview", body) == "interview_invite"
+
+
+def test_outlook_quote_block_is_ignored():
+    body = (
+        "Vielen Dank fuer Ihre Bewerbung, wir pruefen Ihre Unterlagen.\n"
+        "Von: Kaushall\nGesendet: Montag\nBetreff: Bewerbung\n"
+        "Leider habe ich mich entschieden, den Prozess nicht weiter zu verfolgen."
+    )
+    assert _classify("AW: Bewerbung", body) == "application_received"
+
+
+def test_forwarded_rejection_keeps_its_content():
+    body = (
+        "---------- Forwarded message ---------\n"
+        "From: Careers <jobs@example.com>\n"
+        "Unfortunately we will not proceed with your application."
+    )
+    assert _classify("Fwd: Your application: 8725 Working Student", body) == "rejection"
+    assert _classify("Your application", body) == "rejection"
+
+
+def test_farewell_after_interview_closes_the_process():
+    body = ("Lieber Kaushall, besten Dank fuer das angenehme Gespraech. Wir wuenschen dir "
+            "weiterhin viel Erfolg. Lass uns gerne in Kontakt bleiben.")
+    assert _classify("RE: First-round interview", body) == "rejection"
+
+
 def test_document_request_du_form():
     body = "Darf ich dich bitten, mir deine Beurteilungen für 2024 und 2025 zuzusenden?"
     assert _classify("Bewerbung im Team Europe", body) == "info_request"

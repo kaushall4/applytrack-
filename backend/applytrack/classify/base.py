@@ -7,6 +7,7 @@ fallback, the status state machine, and the API. Keep it in one place.
 from __future__ import annotations
 
 import enum
+import re
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -58,14 +59,52 @@ class Classification:
         return self
 
 
+# Where the quoted history of a reply starts. Everything below belongs to
+# earlier mails (often your own) and must not decide this mail's intent.
+_QUOTE_START_RE = re.compile(
+    r"^[ \t]*(?:"
+    r"(?:von|from)[ \t]*:.*$"  # Outlook header block
+    r"|(?:on|am)[ \t](?=[^\n]*\d)[^\n]{0,200}(?:wrote|schrieb)[^\n]{0,80}:?[ \t]*$"
+    r"|-{2,}[ \t]*(?:original message|urspr(?:ue|ü)ngliche nachricht)"
+    r"|_{10,}[ \t]*$"
+    r"|>"
+    r")",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+# In a forward the "quoted" part *is* the content.
+_FORWARD_SUBJECT_RE = re.compile(r"^\s*(?:fwd?|wg|weitergeleitet)\s*:", re.IGNORECASE)
+_FORWARD_MARKER_RE = re.compile(
+    r"forwarded message|weitergeleitete nachricht|begin forwarded", re.IGNORECASE
+)
+
+
+def strip_quoted_reply(body: str, subject: str = "") -> str:
+    """Return only the new part of a reply (unchanged for forwards, or if nothing
+    precedes the quote)."""
+    if not body or _FORWARD_SUBJECT_RE.match(subject or ""):
+        return body
+    match = _QUOTE_START_RE.search(body)
+    if not match:
+        return body
+    head = body[: match.start()]
+    if not head.strip() or _FORWARD_MARKER_RE.search(head):
+        return body
+    return head
+
+
 @dataclass(slots=True)
 class EmailInput:
-    """Minimal email view handed to a classifier."""
+    """Minimal email view handed to a classifier (quoted history removed)."""
 
     sender: str
     subject: str
     body: str
     direction: str = "received"  # "sent" or "received"
+
+    def __post_init__(self) -> None:
+        self.body = strip_quoted_reply(self.body, self.subject)
 
 
 class Classifier(Protocol):

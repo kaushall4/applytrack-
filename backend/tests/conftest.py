@@ -26,6 +26,11 @@ os.environ["GOOGLE_TOKEN_FILE"] = str(_TMP / "applytrack_test_token.json")
 os.environ["GOOGLE_CREDENTIALS_FILE"] = str(_TMP / "applytrack_test_credentials.json")
 os.environ["MOBILE_KEY_FILE"] = str(_TMP / "applytrack_test_mobile.key")
 os.environ["MOBILE_ACCESS"] = "false"
+# Never pick up the real cloud settings from a developer .env.
+os.environ["CLOUD_URL"] = ""
+os.environ["CLOUD_MODE"] = "false"
+os.environ["MOBILE_KEY"] = ""
+os.environ["IGNORED_SENDERS"] = ""
 
 import pytest  # noqa: E402
 
