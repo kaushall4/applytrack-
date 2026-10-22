@@ -21,8 +21,9 @@ _SORTABLE = {
     "last_event_at": Application.last_event_at,
 }
 
-# Statuses that count as "awaiting a response from the company".
-_AWAITING = {Status.APPLICATION_SENT.value, Status.APPLICATION_RECEIVED.value, Status.GHOSTED.value}
+# Statuses that count as "awaiting a response from the company" (still within the
+# ghost threshold — older silent ones are counted as ghosted instead).
+_AWAITING = {Status.APPLICATION_SENT.value, Status.APPLICATION_RECEIVED.value}
 
 
 def _interviewed_app_ids():
@@ -80,7 +81,7 @@ def list_applications(
         pattern="^(interview|awaiting|next_round)$",
         description="'interview': every application that had an interview, whatever "
         "happened afterwards (ongoing, rejected, offer). 'awaiting': still waiting for "
-        "an answer (sent, acknowledged or ghosted).",
+        "an answer (sent or acknowledged, not yet ghosted).",
     ),
     language: str | None = Query(None, description="Filter by application language (de/en)."),
     sort: str = Query("last_event_at", description="Sort field."),

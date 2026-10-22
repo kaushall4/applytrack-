@@ -110,7 +110,8 @@ def test_untitled_confirmation_without_later_job_stays_separate(session):
 
     apps = _apps(session)
     assert len(apps) == 2
-    assert {a.current_status for a in apps} == {"rejection", "application_received"}
+    # The lone confirmation is months old with nothing since → no response.
+    assert {a.current_status for a in apps} == {"rejection", "ghosted"}
 
 
 def test_interview_process_across_threads_is_one_application(session):

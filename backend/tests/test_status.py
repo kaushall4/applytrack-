@@ -76,15 +76,42 @@ def test_not_ghosted_before_threshold():
     assert derive_status(events, ghost_threshold_days=21, now=NOW) == Status.APPLICATION_SENT
 
 
-def test_reply_prevents_ghosting():
+def test_portal_confirmation_alone_is_not_an_answer():
+    # Applied through a portal: only the automatic confirmation, then silence.
+    events = [_ev(Intent.APPLICATION_RECEIVED, 30)]
+    assert is_ghosted(events, ghost_threshold_days=21, now=NOW) is True
+    assert derive_status(events, ghost_threshold_days=21, now=NOW) == Status.GHOSTED
+
+
+def test_recent_confirmation_is_still_awaiting():
     events = [
         _ev(Intent.APPLICATION_SENT, 30, "sent"),
-        _ev(Intent.APPLICATION_RECEIVED, 29),
+        _ev(Intent.APPLICATION_RECEIVED, 10),
     ]
     assert is_ghosted(events, ghost_threshold_days=21, now=NOW) is False
-    # Acknowledged but quiet → stays application_received, not ghosted, because a
-    # reply arrived after we applied.
     assert derive_status(events, ghost_threshold_days=21, now=NOW) == Status.APPLICATION_RECEIVED
+
+
+def test_recent_personal_mail_prevents_ghosting():
+    # A human wrote 5 days ago (no keyword matched), so the process is alive.
+    events = [
+        _ev(Intent.APPLICATION_RECEIVED, 60),
+        _ev(Intent.NOT_APPLICATION_RELATED, 5),
+    ]
+    assert derive_status(events, ghost_threshold_days=21, now=NOW) == Status.APPLICATION_RECEIVED
+
+
+def test_own_follow_up_does_not_reset_the_clock():
+    events = [
+        _ev(Intent.APPLICATION_RECEIVED, 40),
+        _ev(Intent.NOT_APPLICATION_RELATED, 2, "sent"),
+    ]
+    assert derive_status(events, ghost_threshold_days=21, now=NOW) == Status.GHOSTED
+
+
+def test_answered_applications_are_never_ghosted():
+    events = [_ev(Intent.APPLICATION_RECEIVED, 90), _ev(Intent.REJECTION, 80)]
+    assert derive_status(events, ghost_threshold_days=21, now=NOW) == Status.REJECTION
 
 
 def test_empty_defaults_to_sent():

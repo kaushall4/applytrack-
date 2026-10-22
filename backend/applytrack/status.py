@@ -104,27 +104,22 @@ def is_ghosted(
     ghost_threshold_days: int = 21,
     now: datetime | None = None,
 ) -> bool:
-    """True when the last meaningful event is an unanswered outbound application.
+    """True when nothing came from the company for ``ghost_threshold_days``.
 
-    "Unanswered" means no inbound email arrived after our last
-    ``application_sent``, and more than ``ghost_threshold_days`` have passed.
+    Only meaningful while the status is still "sent" or "received": an automatic
+    confirmation from an applicant portal is not an answer. The clock starts at
+    the latest of our application and anything the company sent (the
+    confirmation, or any other mail in the process); our own follow-ups don't
+    reset it.
     """
     now = _as_aware(now or datetime.now(UTC))
 
-    sent_applications = [
-        e for e in events if e.intent == Intent.APPLICATION_SENT and e.direction == "sent"
+    anchors = [
+        _as_aware(e.received_at)
+        for e in events
+        if e.direction == "received"
+        or (e.intent == Intent.APPLICATION_SENT and e.direction == "sent")
     ]
-    if not sent_applications:
+    if not anchors:
         return False
-
-    last_sent = max(sent_applications, key=lambda e: _as_aware(e.received_at))
-    last_sent_at = _as_aware(last_sent.received_at)
-
-    # Any inbound reply after we applied means we were not ghosted.
-    replied = any(
-        e.direction == "received" and _as_aware(e.received_at) > last_sent_at for e in events
-    )
-    if replied:
-        return False
-
-    return now - last_sent_at > timedelta(days=ghost_threshold_days)
+    return now - max(anchors) > timedelta(days=ghost_threshold_days)
