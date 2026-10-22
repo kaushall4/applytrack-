@@ -46,6 +46,7 @@ from .grouping import (
     thread_group_key,
 )
 from .models import Application, Email
+from .rounds import mark_interview_rounds
 from .status import Status, _as_aware
 
 logger = logging.getLogger("applytrack.reclassify")
@@ -182,6 +183,8 @@ def regroup_all(session: Session, emails: list[Email] | None = None) -> int:
         session.flush()
         for email in all_mail:
             email.application_id = app.id
+        # Same job, a fresh invitation after an earlier round → next round.
+        mark_interview_rounds(all_mail)
         session.flush()
         _recompute_application(session, app.id)
 
