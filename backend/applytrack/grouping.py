@@ -288,6 +288,14 @@ def _clean_role(role: str, company: str | None) -> str | None:
     )[0]
     # Drop leading boilerplate: "the position as …", "SPECULATIVE APPLICATION - …".
     role = re.sub(r"^(?:the\s+)?position\s+(?:(?:as|of)\b\s*)?", "", role, flags=re.IGNORECASE)
+    # "the Assistant Relationship Manager opportunity" → "Assistant Relationship Manager".
+    role = re.sub(r"^(?:the|a|an|die|der|das)\s+", "", role, flags=re.IGNORECASE)
+    role = re.sub(
+        r"\s+(?:opportunity|position|role|vacancy|opening|stelle|vakanz)\s*$",
+        "",
+        role,
+        flags=re.IGNORECASE,
+    )
     role = re.sub(
         r"^(?:speculative|unsolicited|initiativ\w*)\s+(?:application|bewerbung)\s*[-–:|]?\s*",
         "",
@@ -352,6 +360,8 @@ def extract_role(subject: str, company: str | None = None) -> str | None:
 _ROLE_STOPWORDS = {
     "the", "for", "of", "in", "and", "und", "als", "a", "an", "bei", "der", "die", "das",
     "m", "w", "d", "f", "x", "to", "at", "im", "am", "mit", "with",
+    # Generic words around a title: "the … opportunity", "die Stelle als …".
+    "opportunity", "position", "role", "vacancy", "opening", "job", "stelle", "vakanz",
 }
 
 
@@ -375,6 +385,17 @@ def roles_match(a: str | None, b: str | None) -> bool:
     if len(small) < 3 or not small <= large:
         return False
     return len(small) / len(large) >= 0.7
+
+
+def role_within(small: str | None, large: str | None) -> bool:
+    """True if every significant word of ``small`` (≥3 words) appears in ``large``.
+
+    Looser than :func:`roles_match` — "Assistant Relationship Manager" lies
+    within "Assistant Relationship Manager, Private Banking" — so callers only
+    use it where the context already points to the same job.
+    """
+    ts, tl = role_tokens(small), role_tokens(large)
+    return len(ts) >= 3 and ts <= tl
 
 
 def extract_role_from_body(body: str, company: str | None = None) -> str | None:

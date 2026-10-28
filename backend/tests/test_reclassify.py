@@ -194,3 +194,43 @@ def test_forwarded_and_replied_mails_create_no_application(session):
     session.commit()
 
     assert _apps(session) == []
+
+
+SYGNUM_PORTAL = "Sygnum People Portal <peopleportal@sygnum.com>"
+SYGNUM_HR = "Sergio Example <sergio.example@sygnum.com>"
+
+
+def test_interview_thread_joins_application_with_longer_title(session):
+    # Portal confirmation with the full title, then a personal invitation that
+    # only says "the Assistant Relationship Manager opportunity".
+    session.add_all([
+        _m("a", "t1", "Your Application - Assistant Relationship Manager, Private Banking (80-100%)",
+           "Thank you for your application to the Assistant Relationship Manager, Private "
+           "Banking (80-100%) position at Sygnum.", 10, 1, SYGNUM_PORTAL),
+        _m("b", "t2", "First-round interview – Assistant Relationship Manager",
+           "Thank you for your application for the Assistant Relationship Manager opportunity "
+           "with us. We would be very pleased to get to know you in a first-round interview.",
+           10, 15, SYGNUM_HR),
+        _m("c", "t2", "RE: First-round interview – Assistant Relationship Manager",
+           "Besten Dank fuer das angenehme Gespraech. Wir wuenschen dir weiterhin viel Erfolg.",
+           10, 21, SYGNUM_HR),
+    ])
+    session.commit()
+
+    apps = _apps(session)
+    assert len(apps) == 1
+    assert apps[0].role.startswith("Assistant Relationship Manager, Private Banking")
+    assert apps[0].current_status == "rejection"
+
+
+def test_two_confirmed_applications_are_not_merged_by_loose_titles(session):
+    # Two separate applications, each with its own confirmation: a generic
+    # title must not swallow the specific one.
+    session.add_all([
+        _m("a", "t1", "UBP – Wealth Management Assistant - Eastern Europe Team (Zurich) - "
+           "Application Confirmation", "Thank you for your application.", 8, 7, UBP),
+        _m("b", "t2", "UBP – SPECULATIVE APPLICATION - Wealth Management Assistant Zurich - "
+           "Application Confirmation", "Thank you for your application.", 10, 1, UBP),
+    ])
+    session.commit()
+    assert len(_apps(session)) == 2

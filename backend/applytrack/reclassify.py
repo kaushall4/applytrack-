@@ -42,6 +42,7 @@ from .grouping import (
     extract_role_from_body,
     is_ignored_sender,
     job_group_key,
+    role_within,
     roles_match,
     thread_group_key,
 )
@@ -285,7 +286,25 @@ def _find_identified_job(jobs: list[_Job], thread: _Thread) -> _Job | None:
         if roles_match(thread.role, j.role)
         and not (thread.ref and j.refs and thread.ref not in j.refs)
     ]
-    return candidates[0] if len(candidates) == 1 else None
+    if len(candidates) == 1:
+        return candidates[0]
+    if candidates:
+        return None
+
+    # An interview / recruiter thread that doesn't start an application itself
+    # (no confirmation of its own) belongs to an earlier application whose title
+    # contains its shorter title: "your application for the Assistant
+    # Relationship Manager opportunity" → "Assistant Relationship Manager,
+    # Private Banking". Only when exactly one such application exists.
+    if thread.intents & _ACK_INTENTS:
+        return None
+    earlier = [
+        j for j in same_company
+        if role_within(thread.role, j.role)
+        and thread.first - _PROCESS_WINDOW <= j.first <= thread.first
+        and not (thread.ref and j.refs and thread.ref not in j.refs)
+    ]
+    return earlier[0] if len(earlier) == 1 else None
 
 
 def _job_for_unidentified(jobs: list[_Job], thread: _Thread) -> _Job | None:
