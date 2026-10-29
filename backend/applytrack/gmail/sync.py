@@ -37,7 +37,7 @@ from .auth import get_connected_address, get_gmail_service
 logger = logging.getLogger("applytrack.sync")
 
 _SNIPPET_LEN = 500
-_MAX_RETRIES = 5
+_MAX_RETRIES = 6
 
 
 @dataclass(slots=True)
@@ -211,26 +211,40 @@ def _fetch_and_parse(service, gmail_id: str) -> _ParsedMessage | None:
 
 
 def _extract_body(payload: dict) -> str:
-    """Depth-first search for a text/plain part; fall back to text/html stripped."""
-    mime = payload.get("mimeType", "")
+    """The mail text: the first text/plain part anywhere in the MIME tree, else
+    the first text/html part (tags stripped).
+
+    Portal mails nest the text deeply (multipart/mixed → multipart/related →
+    text/html, next to image attachments), so the whole tree is searched.
+    """
+    plain = _find_part(payload, "text/plain")
+    if plain:
+        return plain
+    html = _find_part(payload, "text/html")
+    return _strip_html(html) if html else ""
+
+
+def _find_part(payload: dict, mime: str) -> str:
+    """Depth-first search for an inline (non-attachment) part of type ``mime``."""
     body_data = payload.get("body", {}).get("data")
-
-    if mime == "text/plain" and body_data:
+    if payload.get("mimeType", "").startswith(mime) and body_data and not payload.get("filename"):
         return _decode(body_data)
-
-    html_fallback = ""
     for part in payload.get("parts", []) or []:
-        text = _extract_body(part)
-        if text and part.get("mimeType") == "text/plain":
-            return text
-        if text and part.get("mimeType") == "text/html" and not html_fallback:
-            html_fallback = text
-
-    if mime == "text/html" and body_data:
-        return _strip_html(_decode(body_data))
-    if html_fallback:
-        return _strip_html(html_fallback)
+        found = _find_part(part, mime)
+        if found:
+            return found
     return ""
+
+
+def fetch_body(service, gmail_id: str) -> str | None:
+    """Full text of one stored mail, re-read from Gmail (None if unavailable)."""
+    time.sleep(0.15)  # stay well below Gmail's per-user rate limit
+    try:
+        msg = _execute(service.users().messages().get(userId="me", id=gmail_id, format="full"))
+    except Exception as exc:  # noqa: BLE001 — deleted mail, network …
+        logger.warning("Could not re-read message: %s", type(exc).__name__)
+        return None
+    return _extract_body(msg.get("payload", {})) or msg.get("snippet", "")
 
 
 def _decode(data: str) -> str:
@@ -463,7 +477,9 @@ def _execute(request):
             return request.execute()
         except HttpError as exc:
             status = exc.resp.status if exc.resp is not None else None
-            if status in (429, 500, 503) and attempt < _MAX_RETRIES - 1:
+            # Gmail reports per-user rate limits as 403 "rateLimitExceeded".
+            rate_limited = status == 403 and "ratelimitexceeded" in str(exc).lower()
+            if (status in (429, 500, 503) or rate_limited) and attempt < _MAX_RETRIES - 1:
                 logger.warning("Gmail API %s; retrying in %.1fs", status, delay)
                 time.sleep(delay)
                 delay *= 2

@@ -83,13 +83,31 @@ def sync(full: bool = typer.Option(False, "--full", help="Force a full re-sync."
 
 
 @app.command()
-def reclassify() -> None:
-    """Re-classify stored emails with the current logic (no Gmail sync)."""
+def reclassify(
+    offline: bool = typer.Option(
+        False, "--offline", help="Use only the stored excerpts (don't re-read mail from Gmail)."
+    ),
+) -> None:
+    """Re-classify stored emails with the current logic.
+
+    By default each mail's full text is re-read from Gmail (read-only), so a
+    decisive sentence beyond the stored excerpt still counts.
+    """
     from .reclassify import reclassify_all
 
     init_db()
+    body_for = None
+    if not offline:
+        try:
+            from .gmail.auth import get_gmail_service
+            from .gmail.sync import fetch_body
+
+            service = get_gmail_service()
+            body_for = lambda email: fetch_body(service, email.gmail_id)  # noqa: E731
+        except GmailAuthError as exc:
+            console.print(f"[yellow]Gmail not reachable ({exc}); using stored excerpts.[/]")
     with session_scope() as session:
-        r = reclassify_all(session)
+        r = reclassify_all(session, body_for=body_for)
     console.print(
         f"[bold green]✓[/] Reclassified {r.total} email(s): "
         f"{r.changed} changed, {r.skipped_overrides} override(s) kept, "

@@ -36,6 +36,7 @@ _ATS_DOMAINS = {
     "taleo.net", "icims.com", "refline.ch", "softgarden.io", "softgarden.de",
     "prescreen.io", "avature.net", "eightfold.ai", "personio.de", "ostendis.com",
     "jacando.com", "guidecom.de", "concludis.de", "rexx-systems.com",
+    "pinpoint.email", "pinpointhq.com",
 }
 
 # Generic subdomain labels that precede (or stand in for) the employer label.
@@ -122,9 +123,15 @@ def _looks_like_person(tokens: list[str]) -> bool:
     return any(re.fullmatch(title, t) for t in tokens)
 
 
+_NO_REPLY_RE = re.compile(r"[-_ ]?(?:do[-_ ]?not[-_ ]?reply|no[-_ ]?reply)\b", re.IGNORECASE)
+
+
 def _clean_display(name: str) -> tuple[str, bool]:
     """Strip role/system words from a display name. Returns (cleaned, removed_any)."""
-    removed = False
+    # "Deutsche_Bank_Workday-do-not-reply" → "Deutsche Bank Workday"
+    plain = _NO_REPLY_RE.sub(" ", name).replace("_", " ")
+    removed = plain != name
+    name = plain
     kept: list[str] = []
     for raw in re.split(r"[\s,]+", name):
         tok = raw.strip(" -|")
@@ -147,6 +154,9 @@ _COMPANY_ALIASES = {
     "vontobel": "Vontobel", "rothschildandco": "Rothschild & Co",
     "jpmorgan": "JPMorgan Chase & Co", "jpmchase": "JPMorgan Chase & Co",
     "schroders": "Schroders", "credit-suisse": "Credit Suisse",
+    # Oracle Cloud tenant prefix of Schroders' recruiting mails.
+    "ekbq": "Schroders",
+    "db": "Deutsche Bank", "ghr": "Bank of America",
 }
 
 
@@ -191,6 +201,36 @@ def company_from_subject(subject: str | None) -> str | None:
         return None
     m = _SUBJECT_AT_RE.search(subject.strip())
     return m.group(1).strip(" .") if m else None
+
+
+# Employer named in the text of a portal mail: "…position at AlTi Tiedemann
+# Global.", "…interest in Bank of America and…", "…bei der Deutschen Bank."
+_NAME = r"[A-Z][\w&'.\-]*(?:\s+(?:(?:of|and|&|de|du)\s+)?[A-Z][\w&'.\-]*){0,4}"
+_BODY_COMPANY_RE = re.compile(
+    rf"(?:position at|role at|working with us at|interest in|join(?:ing)? the team at|"
+    rf"apply(?:ing)? to join)\s+(?:the\s+)?({_NAME})"
+)
+_BODY_COMPANY_STOP = {"our", "the", "this", "your", "a", "an", "working", "joining"}
+
+
+def company_from_body(text: str | None) -> str | None:
+    """Best-effort employer from a mail text (used only when nothing else knows)."""
+    for m in _BODY_COMPANY_RE.finditer(text or ""):
+        # Stop at a sentence end: "Bank of America. Your …" → "Bank of America".
+        name = re.split(r"\.\s", m.group(1))[0].strip(" .'")
+        if name.split()[0].lower() not in _BODY_COMPANY_STOP and len(name) > 2:
+            return name
+    return None
+
+
+_FORWARDED_FROM_RE = re.compile(r"(?:^|\s)(?:von|from)\s*:\s*([^\n]{0,80}?<[^>\s]+@[^>\s]+>|[\w.+-]+@[\w.-]+)",
+                                re.IGNORECASE)
+
+
+def forwarded_sender(text: str | None) -> str | None:
+    """The original sender inside a forwarded mail ("Von: <jobs@vontobel.com>")."""
+    m = _FORWARDED_FROM_RE.search(text or "")
+    return m.group(1).strip() if m else None
 
 
 def extract_company(header: str, subject: str | None = None) -> str | None:
@@ -240,9 +280,15 @@ _ROLE_MARKERS = [
     r"bewerbung um die stelle als\s+",
     r"bewerbung um die stelle\s+",
     r"bewerbung als\s+",
-    r"ihre bewerbung bei\s+\S+\s+",  # "… bei UBS <role>" — company word consumed
-    r"deine bewerbung bei\s+\S+\s+",
-    r"bewerbung bei\s+\S+\s+",
+    # "… bei UBS <role>" — company word consumed; "bei der Deutschen Bank" has no role.
+    r"ihre bewerbung bei\s+(?!(?:der|dem|den|die)\b)\S+\s+",
+    r"deine bewerbung bei\s+(?!(?:der|dem|den|die)\b)\S+\s+",
+    r"bewerbung bei\s+(?!(?:der|dem|den|die)\b)\S+\s+",
+    # "Bewerbung befindet sich im Line Management Screen - <role>"
+    r"(?:line manage(?:ment|r) screen|hr review)\s*[-–]\s*",
+    # "Ihre Bewerbung <Role>" without a separator (Julius Baer).
+    r"ihre bewerbung\s+(?!(?:bei|als|vom|f(?:ü|ue)r|um|auf|an|im|in|zu|ist|wurde|wird|"
+    r"erhalten|eingegangen|best(?:ä|ae)tigt|ist|und|mit|von)\b)(?=[a-z])",
     r"your application for\s+",
     r"application for the position of\s+",
     r"application for the position\s+",
@@ -260,11 +306,15 @@ _BODY_ROLE_RE = re.compile(
     r"(?:bewerbung als|bewerbung (?:f(?:ü|ue)r|auf) die (?:stelle|position)(?: als)?|"
     r"interesse an (?:unserer|der) (?:stelle|position)(?: als)?|"
     r"for the (?:role|position) of|application for the (?:role|position) of|"
+    r"thank you for applying (?:to|for)(?: the)?|application as|the post of|"
+    r"interest in the|applying for the|re:\s*\d{5,}|"
     r"application for)\s+(.{3,120}?)"
     # End of the title: sentence end, "bei/at <Company>", " - 342286BR",
-    # "… is scheduled", "… und für Ihr Interesse".
+    # "… is scheduled", "… und für Ihr Interesse", "… position at", "… (Open)".
     r"(?:[.!?\n]|\s+(?:bei|at|with)\s+[A-ZÄÖÜ]|\s+-\s*\d{5,}|"
-    r"\s+(?:is|has|was|will|ist|wird|wurde)\s|\s+(?:and|und)\s+(?:for|f(?:ü|ue)r)\b|$)",
+    r"\s+(?:is|has|was|will|ist|wird|wurde)\s|\s+(?:and|und)\s+(?:for|f(?:ü|ue)r)\b|"
+    r"\s+und\s+(?:das|dem|den|die|ihr|ihre)\b|\s+(?:position|role)\s+(?:at|with|bei)\b|"
+    r"\s+\(open\)|$)",
     re.IGNORECASE,
 )
 
@@ -306,8 +356,20 @@ def _clean_role(role: str, company: str | None) -> str | None:
     role = re.sub(r"\(\s*(?:job\s*number[^)]*|ref[^)]*|\d+[a-z]*)\s*\)", "", role, flags=re.IGNORECASE)
     # Drop workload percentages and gender tags (replace with a space so the
     # neighbouring words don't get glued together; spaces are collapsed below).
-    role = re.sub(r"\(?\s*\d{2,3}\s*[-–]\s*\d{2,3}\s*%\s*\)?", " ", role)
-    role = re.sub(r"\(?\s*\d{2,3}\s*%\s*\)?", " ", role)
+    # "(80-100%)", "80 bis 100 %"; inside a longer bracket keep the rest:
+    # "(40-50%, Jan/Feb 2027 …)" → "(Jan/Feb 2027 …)".
+    role = re.sub(r"\(\s*\d{2,3}\s*(?:[-–]|bis|to)\s*\d{2,3}\s*%\s*\)", " ", role)
+    role = re.sub(r"\(\s*\d{2,3}\s*%\s*\)", " ", role)
+    role = re.sub(r"\(?\s*\d{2,3}\s*%\s*[-–]\s*\d{2,3}\s*%\s*\)?", " ", role)  # (60%-100%)
+    role = re.sub(r"\d{2,3}\s*(?:[-–]|bis|to)\s*\d{2,3}\s*%\s*,?\s*", " ", role)
+    role = re.sub(r"\d{2,3}\s*%\s*,?\s*", " ", role)
+    role = re.sub(r"\(\s+", "(", role)
+    # "… Private Banking sowie für deine Geduld" — the sentence goes on.
+    role = re.split(r"\s+(?:sowie|as well as)\s+", role)[0]
+    # Leftovers of removed tags: "(… Student - )", "Assistant , Executive".
+    role = re.sub(r"\s*[-–;,/]\s*\)", ")", role)
+    role = re.sub(r"\(\s*\)", "", role)
+    role = re.sub(r"\s+([,;])", r"\1", role)
     role = re.sub(
         r"\(?\s*\b[mwfdax](?:\s*/\s*[mwfdax])+\b\s*[;)]?", " ", role, flags=re.IGNORECASE
     )
@@ -318,6 +380,7 @@ def _clean_role(role: str, company: str | None) -> str | None:
     # Drop standalone long reference codes and tidy up.
     role = re.sub(r"\b\d{4,}[a-z]{0,3}\b", "", role, flags=re.IGNORECASE)
     role = re.sub(r"\s{2,}", " ", role).strip(" -–—|:,.;")
+    role = re.sub(r"\s+([,;])", r"\1", role)
     # Close a parenthesis the subject cut off: "Analyst (12 months" → "Analyst (12 months)".
     if role.count("(") > role.count(")"):
         role += ")"
@@ -329,8 +392,9 @@ def _clean_role(role: str, company: str | None) -> str | None:
 
 # Words that end up as a "role" in subjects like "Re: UBP Interview" but aren't one.
 _GENERIC_ROLES = {
+    "application process", "application update", "update", "application status",
     "application", "bewerbung", "online application", "interview", "termin",
-    "feedback", "update", "gespraech", "gespräch", "absage", "zusage",
+    "feedback", "gespraech", "gespräch", "absage", "zusage",
 }
 
 

@@ -62,6 +62,8 @@ FRAGMENTS: dict[Intent, list[str]] = {
         # Farewells that close a process ("wünschen dir weiterhin viel Erfolg").
         "weiterhin viel erfolg", "beruflichen zukunft", "beruflichen werdegang alles gute",
         "every success in your", "best of luck in your", "success in your future",
+        "sorry to inform", "not been selected", "nicht in die engere auswahl",
+        "noch besser entsprechen", "besser entsprechen", "noch genauer entsprechen",
     ],
     Intent.OFFER: [
         # DE
@@ -74,14 +76,14 @@ FRAGMENTS: dict[Intent, list[str]] = {
     Intent.NEXT_ROUND: [
         # DE
         "zweite runde", "zweiten runde", "naechste runde", "folgegespraech",
-        "fallstudie", "assessment", "weitere runde", "zweites gespraech",
+        "fallstudie", "assessment-center", "weitere runde", "zweites gespraech",
         "weiteres gespraech", "weiteren gespraech", "weiteren interview",
         "weiteres interview", "finale gespraech", "finalen gespraech",
         "zweitrunden", "im prozess weitermachen", "im prozess weiter",
         "referenz einholen", "referenzen einholen",
         # EN
         "second round", "next round", "final round", "case study",
-        "assessment center", "move to the next stage", "second interview",
+        "assessment center", "assessment centre", "move to the next stage", "second interview",
         "next interview", "further interview", "final interview", "reference check",
     ],
     # Only unambiguous invitations. Vaguer cues ("next steps", "availability")
@@ -130,7 +132,16 @@ FRAGMENTS: dict[Intent, list[str]] = {
         "thank you for your application", "thank you for applying",
         "received your application", "received your documents",
         "application is being reviewed", "we will be in touch", "currently reviewing",
-        "get back to you",
+        "get back to you", "pleased to receive your application", "received your job application",
+        "successfully submitted", "submitting your application", "receipt of application",
+        "still considering your application", "that you applied", "interest in our open position",
+        "moved to our shortlist", "few more days to evaluate", "dem hiring manager",
+        "application was received", "to the hiring manager", "line manager screen",
+        "line management screen",
+        # DE
+        "empfang ihrer bewerbung", "vielen dank fuer die bewerbung", "sich bei uns beworben",
+        "ihre bewerbung auf die stelle", "interesse und ihre bewerbung", "um etwas geduld",
+        "zustellung ihrer bewerbungsunterlagen",
     ],
 }
 
@@ -171,7 +182,8 @@ def fold(text: str) -> str:
 # don't count.
 _CONDITIONAL_RE = re.compile(
     r"\b(falls|sollte|sollten|sofern|fuer den fall|wenn ihr profil|wenn dein profil|"
-    r"if|should|in case|once we|whether)\b"
+    r"if|should|in case|once we|whether|might|may|typically|usually|can expect|"
+    r"what to expect|hiring process|recruiting process|bewerbungsprozess|ablauf des)\b"
 )
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?\n])\s+|\n")
 _CONDITION_SENSITIVE = {Intent.INTERVIEW_INVITE, Intent.NEXT_ROUND}
@@ -186,7 +198,8 @@ _SUBJECT_INTERVIEW_RE = re.compile(r"\binterview|gespraech\b|vorstellungsgesprae
 # are never a job offer.
 _OFFER_NOISE_RE = re.compile(
     r"mentor|free access|talent (pool|community|network)|job alert|newsletter|webinar|"
-    r"career (journey|support|resources)|discount|kostenlos|talentpool|karriere-?newsletter"
+    r"career (journey|support|resources)|discount|kostenlos|talentpool|karriere-?newsletter|"
+    r"stay connected|linkedin|follow us|upcoming events|career page|karriereseite"
 )
 # Polite phrasing that is only an offer when nothing in the mail says no.
 _GENERIC_OFFER_FRAGMENTS = {"pleased to offer", "we would like to offer"}
@@ -212,7 +225,9 @@ def matched_fragments(text: str) -> dict[Intent, list[str]]:
     hits: dict[Intent, list[str]] = {}
     for intent, fragments in FRAGMENTS.items():
         if intent in _CONDITION_SENSITIVE:
-            haystack = unconditional
+            # Generic process descriptions and newsletter/networking lines
+            # ("invite you to stay connected on LinkedIn") are no invitation.
+            haystack = _offer_sentences(unconditional)
         elif intent is Intent.OFFER:
             haystack = offer_text
         else:

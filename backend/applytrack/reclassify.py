@@ -25,7 +25,9 @@ so signals beyond the snippet length cannot be seen.
 from __future__ import annotations
 
 import logging
+import re
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
@@ -33,13 +35,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .classify.base import EmailInput, Intent, get_classifier
-from .gmail.sync import _recompute_application
+from .gmail.sync import _SNIPPET_LEN, _recompute_application
 from .grouping import (
+    company_from_body,
     counterparty_address,
     extract_company,
     extract_job_ref,
     extract_role,
     extract_role_from_body,
+    forwarded_sender,
     is_ignored_sender,
     job_group_key,
     role_within,
@@ -53,6 +57,9 @@ from .status import Status, _as_aware
 logger = logging.getLogger("applytrack.reclassify")
 
 _ACK_INTENTS = {Intent.APPLICATION_RECEIVED, Intent.APPLICATION_SENT}
+_REAPPLY_GAP = timedelta(days=7)  # rejection → new confirmation = new application
+_INTERVIEW_INTENTS = {Intent.INTERVIEW_INVITE, Intent.NEXT_ROUND}
+_FORWARD_RE = re.compile(r"^\s*(?:fwd?|wg|weitergeleitet)\s*:", re.IGNORECASE)
 _ACK_WINDOW = timedelta(days=60)  # confirmation → the job's next mail
 _PROCESS_WINDOW = timedelta(days=120)  # application → interview/recruiter thread
 
@@ -113,7 +120,14 @@ class _Job:
         return min(t.first for t in self.threads)
 
 
-def reclassify_all(session: Session) -> ReclassifyResult:
+def reclassify_all(
+    session: Session, body_for: Callable[[Email], str | None] | None = None
+) -> ReclassifyResult:
+    """Re-classify every stored mail and rebuild the applications.
+
+    ``body_for`` may return a mail's full text (re-read from Gmail); otherwise
+    the stored excerpt is used, which can miss a decisive sentence further down.
+    """
     classifier = get_classifier()
     result = ReclassifyResult()
 
@@ -125,11 +139,14 @@ def reclassify_all(session: Session) -> ReclassifyResult:
         if email.manual_override:
             result.skipped_overrides += 1
             continue
+        body = body_for(email) if body_for else None
+        if body:
+            email.body_snippet = body[:_SNIPPET_LEN]
         classification = classifier.classify(
             EmailInput(
                 sender=email.sender,
                 subject=email.subject,
-                body=email.body_snippet,
+                body=body or email.body_snippet,
                 direction=email.direction,
             )
         )
@@ -165,31 +182,35 @@ def regroup_all(session: Session, emails: list[Email] | None = None) -> int:
     jobs = _merge_into_jobs(threads)
 
     used_keys: set[str] = set()
+    created = 0
     for job in jobs:
-        key = job_group_key(job.company, job.role, min(job.refs, default=None),
-                            job.threads[0].thread_id)
-        if key in used_keys:  # two distinct jobs with an identical title
-            key = thread_group_key(job.threads[0].thread_id)
-        used_keys.add(key)
+        base_key = job_group_key(job.company, job.role, min(job.refs, default=None),
+                                 job.threads[0].thread_id)
+        if base_key in used_keys:  # two distinct jobs with an identical title
+            base_key = thread_group_key(job.threads[0].thread_id)
 
-        all_mail = [e for t in job.threads for e in t.emails]
-        app = Application(
-            company=job.company,
-            role=job.role,
-            group_key=key,
-            language=all_mail[0].language or "en",
-            current_status=Status.APPLICATION_SENT.value,
-        )
-        session.add(app)
-        session.flush()
-        for email in all_mail:
-            email.application_id = app.id
-        # Same job, a fresh invitation after an earlier round → next round.
-        mark_interview_rounds(all_mail)
-        session.flush()
-        _recompute_application(session, app.id)
+        job_mail = [e for t in job.threads for e in t.emails]
+        for n, all_mail in enumerate(_split_reapplications(job_mail), start=1):
+            key = base_key if n == 1 else f"{base_key}#{n}"
+            used_keys.add(key)
+            app = Application(
+                company=job.company,
+                role=job.role,
+                group_key=key,
+                language=all_mail[0].language or "en",
+                current_status=Status.APPLICATION_SENT.value,
+            )
+            session.add(app)
+            session.flush()
+            created += 1
+            for email in all_mail:
+                email.application_id = app.id
+            # Same job, a fresh invitation after an earlier round → next round.
+            mark_interview_rounds(all_mail)
+            session.flush()
+            _recompute_application(session, app.id)
 
-    return len(jobs)
+    return created
 
 
 def _describe_threads(session: Session, emails: list[Email]) -> list[_Thread]:
@@ -206,7 +227,9 @@ def _describe_threads(session: Session, emails: list[Email]) -> list[_Thread]:
         by_thread[email.thread_id].append(email)
 
     threads: list[_Thread] = []
-    for thread_id, thread_emails in by_thread.items():
+    for thread_id, thread_emails in (
+        part for tid, mails in by_thread.items() for part in _split_by_ref(tid, mails)
+    ):
         relevant = [
             e for e in thread_emails
             if Intent.from_str(e.effective_intent) is not Intent.NOT_APPLICATION_RELATED
@@ -228,6 +251,51 @@ def _describe_threads(session: Session, emails: list[Email]) -> list[_Thread]:
             )
         )
     return sorted(threads, key=lambda t: t.first)
+
+
+def _split_by_ref(thread_id: str, emails: list[Email]) -> list[tuple[str, list[Email]]]:
+    """Split a Gmail thread that mixes several jobs.
+
+    Portals reuse one subject for every confirmation ("Your candidate reference
+    number - UBS."), so Gmail threads confirmations for different jobs together.
+    Each mail goes to the job reference it names; mails without one stay with
+    the previous mail's job.
+    """
+    refs = [extract_job_ref(e.subject) or extract_job_ref(e.body_snippet) for e in emails]
+    if len({r for r in refs if r}) <= 1:
+        return [(thread_id, emails)]
+    parts: dict[str, list[Email]] = defaultdict(list)
+    ordered = sorted(zip(emails, refs, strict=True), key=lambda pair: _as_aware(pair[0].received_at))
+    current = next(r for r in refs if r)
+    for email, ref in ordered:
+        current = ref or current
+        parts[current].append(email)
+    return [(f"{thread_id}#{ref}", mails) for ref, mails in parts.items()]
+
+
+def _split_reapplications(emails: list[Email]) -> list[list[Email]]:
+    """Split one job's mail where you applied again after a rejection.
+
+    A new confirmation at least a week after a rejection starts a new
+    application (e.g. the same posting re-advertised and re-applied for).
+    """
+    segments: list[list[Email]] = [[]]
+    last_rejection: datetime | None = None
+    for email in sorted(emails, key=lambda e: _as_aware(e.received_at)):
+        intent = Intent.from_str(email.effective_intent)
+        at = _as_aware(email.received_at)
+        if (
+            intent in _ACK_INTENTS
+            and last_rejection is not None
+            and at - last_rejection >= _REAPPLY_GAP
+            and segments[-1]
+        ):
+            segments.append([])
+            last_rejection = None
+        segments[-1].append(email)
+        if intent is Intent.REJECTION:
+            last_rejection = at
+    return [s for s in segments if s]
 
 
 def _merge_into_jobs(threads: list[_Thread]) -> list[_Job]:
@@ -323,8 +391,17 @@ def _job_for_unidentified(jobs: list[_Job], thread: _Thread) -> _Job | None:
         ]
         return min(after, key=lambda pair: pair[0])[1] if after else None
 
-    # Interview / recruiter thread → the job applied for most recently before it.
+    # Interview / recruiter thread → a job already in an interview process
+    # (e.g. a forwarded meeting confirmation), else the job applied for most
+    # recently before it.
     before = [j for j in company_jobs if thread.first - _PROCESS_WINDOW <= j.first <= thread.first]
+    if thread.intents & _INTERVIEW_INTENTS:
+        active = [
+            j for j in before
+            if any(t.intents & _INTERVIEW_INTENTS and t.first <= thread.first for t in j.threads)
+        ]
+        if active:
+            return max(active, key=lambda j: max(t.first for t in j.threads if t.first <= thread.first))
     if before:
         return max(before, key=lambda j: j.first)
     after = [j for j in company_jobs if thread.first < j.first <= thread.first + _ACK_WINDOW]
@@ -337,8 +414,14 @@ def _best_company(emails: list[Email]) -> str:
     # outbound mail (whose recipient may be a bare ATS address).
     for email in sorted(emails, key=lambda e: e.direction != "received"):
         address = counterparty_address(email.direction, email.sender, email.recipient)
+        if _FORWARD_RE.match(email.subject or "") and (original := forwarded_sender(email.body_snippet)):
+            address = original  # a forwarded portal mail: the original sender counts
         company = extract_company(address, email.subject)
         if company and company != "Unknown":
+            return company
+    # Nothing in the headers (generic "Global HR" Workday sender, …): the text.
+    for email in emails:
+        if email.direction == "received" and (company := company_from_body(email.body_snippet)):
             return company
     return "Unknown"
 
