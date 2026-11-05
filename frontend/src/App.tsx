@@ -136,11 +136,11 @@ export function App() {
       {/* Ambient gradient blobs */}
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div
-          className="absolute -left-24 -top-32 h-96 w-96 rounded-full opacity-20 blur-3xl"
+          className="absolute -left-32 -top-40 h-[28rem] w-[28rem] rounded-full opacity-[0.12] blur-3xl"
           style={{ background: "rgb(var(--glow-1))" }}
         />
         <div
-          className="absolute -right-24 top-40 h-96 w-96 rounded-full opacity-10 blur-3xl"
+          className="absolute -right-32 top-24 h-[28rem] w-[28rem] rounded-full opacity-[0.18] blur-3xl"
           style={{ background: "rgb(var(--glow-2))" }}
         />
       </div>

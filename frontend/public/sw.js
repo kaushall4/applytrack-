@@ -2,7 +2,7 @@
 // The app shell (HTML/JS/CSS/icons) is cached; /api is NEVER cached — your
 // application data always comes live from the ApplyTrack server on your PC.
 
-const CACHE = "applytrack-shell-v1";
+const CACHE = "applytrack-shell-v2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/", "/manifest.webmanifest"])));

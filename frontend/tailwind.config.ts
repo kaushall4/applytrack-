@@ -3,8 +3,8 @@ import type { Config } from "tailwindcss";
 /**
  * Design system. Colors are driven by CSS variables (see index.css) so light
  * and dark themes share one set of semantic tokens. Status colors encode
- * meaning: neutral=applied, blue=interview, green=offer, red=rejection,
- * amber=ghosted.
+ * meaning in jewel tones: stone=applied, sapphire=interview, emerald=offer,
+ * garnet=rejection, ochre=ghosted.
  */
 export default {
   darkMode: "class",
@@ -24,7 +24,9 @@ export default {
         },
       },
       fontFamily: {
+        display: ['"Cormorant Garamond"', "Georgia", '"Times New Roman"', "serif"],
         sans: [
+          '"Inter Variable"',
           "Inter",
           "ui-sans-serif",
           "system-ui",
@@ -41,8 +43,9 @@ export default {
         "2xl": "1.125rem",
       },
       boxShadow: {
-        card: "0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06)",
-        pop: "0 10px 30px -12px rgb(0 0 0 / 0.35)",
+        card: "0 1px 2px 0 rgb(var(--shadow-tint) / 0.04), 0 12px 28px -18px rgb(var(--shadow-tint) / 0.22)",
+        lift: "0 1px 2px 0 rgb(var(--shadow-tint) / 0.05), 0 20px 36px -20px rgb(var(--shadow-tint) / 0.32)",
+        pop: "0 24px 60px -24px rgb(var(--shadow-tint) / 0.45)",
       },
       keyframes: {
         "fade-in": {

@@ -2,6 +2,16 @@ import type { Language } from "./types";
 
 const LOCALE: Record<Language, string> = { de: "de-CH", en: "en-GB" };
 
+/** Readable mail excerpt: decodes entities, drops inline-image and link leftovers. */
+export function cleanExcerpt(text: string): string {
+  // An inert parsed document: nothing in the mail text can run or load here.
+  const decoded = new DOMParser().parseFromString(text, "text/html").body.textContent ?? "";
+  return decoded
+    .replace(/\[cid:[^\]]*\]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function formatDate(iso: string | null, lang: Language): string {
   if (!iso) return "—";
   const d = new Date(iso);

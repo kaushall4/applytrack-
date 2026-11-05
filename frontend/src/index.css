@@ -5,37 +5,54 @@
 /* ── Design tokens ────────────────────────────────────────────────────────── */
 /* Channel triplets (R G B) so Tailwind can apply <alpha-value>.               */
 :root {
-  --bg: 247 247 251;
-  --surface: 255 255 255;
-  --surface-2: 244 244 250;
-  --border: 228 228 238;
-  --fg: 23 23 37;
-  --muted: 108 108 130;
+  color-scheme: light;
 
-  /* Distinct indigo–violet accent (not default blue-grey). */
-  --brand: 109 90 246;
+  /* Warm ivory paper, deep ink, champagne hairlines. */
+  --bg: 251 248 242;
+  --surface: 255 254 251;
+  --surface-2: 247 242 232;
+  --border: 232 224 208;
+  --fg: 33 27 20;
+  --muted: 112 101 86;
+
+  /* Antique gold accent (dark enough to carry white text). */
+  --brand: 139 104 36;
   --brand-fg: 255 255 255;
-  --ring: 109 90 246;
+  --ring: 139 104 36;
 
-  /* Soft ambient gradient blobs behind the app shell. */
-  --glow-1: 124 92 252;
-  --glow-2: 56 189 248;
+  /* Metallic fill of the monogram and icons. */
+  --gold-from: 122 90 30;
+  --gold-to: 186 150 78;
+
+  /* Soft light behind the app shell. */
+  --glow-1: 226 196 138;
+  --glow-2: 244 222 196;
+
+  --shadow-tint: 92 72 38;
 }
 
 .dark {
-  --bg: 16 15 25;
-  --surface: 24 23 37;
-  --surface-2: 32 31 48;
-  --border: 46 44 66;
-  --fg: 233 233 245;
-  --muted: 151 150 173;
+  color-scheme: dark;
 
-  --brand: 141 124 255;
-  --brand-fg: 13 12 22;
-  --ring: 141 124 255;
+  /* Warm charcoal, never blue-black. */
+  --bg: 19 17 14;
+  --surface: 28 25 21;
+  --surface-2: 37 33 28;
+  --border: 60 53 43;
+  --fg: 245 239 228;
+  --muted: 172 160 141;
 
-  --glow-1: 109 90 246;
-  --glow-2: 14 116 144;
+  --brand: 214 178 104;
+  --brand-fg: 26 21 13;
+  --ring: 214 178 104;
+
+  --gold-from: 186 150 78;
+  --gold-to: 232 204 146;
+
+  --glow-1: 139 104 36;
+  --glow-2: 92 72 38;
+
+  --shadow-tint: 0 0 0;
 }
 
 html,
@@ -46,6 +63,38 @@ body,
 
 body {
   @apply bg-bg text-fg font-sans antialiased;
+}
+
+/* Headings and large figures use the serif; everything small stays sans. */
+h1,
+h2,
+.font-display {
+  font-family: theme("fontFamily.display");
+  font-feature-settings: "lnum" 1, "kern" 1;
+  letter-spacing: -0.005em;
+}
+
+::selection {
+  background-color: rgb(var(--brand) / 0.22);
+}
+
+::placeholder {
+  color: rgb(var(--muted) / 0.75);
+}
+
+/* Small uppercase label used above figures and in table heads. */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgb(var(--muted));
+}
+
+/* Metallic fill: monogram, avatar. */
+.gold-fill {
+  background-image: linear-gradient(135deg, rgb(var(--gold-from)), rgb(var(--gold-to)));
+  color: rgb(var(--brand-fg));
 }
 
 /* Themed, slim scrollbar */

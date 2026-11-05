@@ -13,7 +13,7 @@ export function LangToggle() {
           onClick={() => setLang(l)}
           aria-pressed={lang === l}
           className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors ${
-            lang === l ? "bg-brand text-brand-fg" : "text-muted hover:text-fg"
+            lang === l ? "bg-fg text-bg" : "text-muted hover:text-fg"
           }`}
         >
           {l.toUpperCase()}

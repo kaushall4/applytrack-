@@ -29,7 +29,7 @@ export function Noise() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold tracking-tight">{t.noise.title}</h1>
+        <h1 className="text-4xl font-medium leading-tight">{t.noise.title}</h1>
         <p className="text-sm text-muted">{t.noise.subtitle}</p>
       </div>
 

@@ -4,6 +4,12 @@ export const en = {
   appName: "ApplyTrack",
   tagline: "Job application tracker",
 
+  dashboard: {
+    title: "Your applications",
+    summary: (interviews: number, total: number) =>
+      `${interviews} ${interviews === 1 ? "interview" : "interviews"} from ${total} applications`,
+  },
+
   nav: {
     dashboard: "Dashboard",
     review: "Needs review",

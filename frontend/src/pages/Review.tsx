@@ -31,7 +31,7 @@ export function Review() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold tracking-tight">{t.review.title}</h1>
+        <h1 className="text-4xl font-medium leading-tight">{t.review.title}</h1>
         <p className="text-sm text-muted">{t.review.subtitle}</p>
       </div>
 

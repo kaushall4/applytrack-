@@ -28,7 +28,7 @@ export function StatusDonut({ applications }: { applications: Application[] }) {
       transition={{ duration: 0.35, ease: "easeOut" }}
       className="rounded-2xl border border-border bg-surface p-5 shadow-card"
     >
-      <h3 className="mb-3 text-sm font-semibold">{t.chart.title}</h3>
+      <h2 className="mb-4 text-xl font-medium">{t.chart.title}</h2>
       <div className="flex items-center gap-4">
         <div className="relative h-36 w-36 shrink-0">
           <ResponsiveContainer width="100%" height="100%">
@@ -37,9 +37,9 @@ export function StatusDonut({ applications }: { applications: Application[] }) {
                 data={data}
                 dataKey="value"
                 nameKey="name"
-                innerRadius={46}
+                innerRadius={54}
                 outerRadius={68}
-                paddingAngle={2}
+                paddingAngle={1.5}
                 stroke="none"
                 startAngle={90}
                 endAngle={-270}
@@ -56,25 +56,25 @@ export function StatusDonut({ applications }: { applications: Application[] }) {
                   background: "rgb(var(--surface))",
                   color: "rgb(var(--fg))",
                   fontSize: 12,
-                  boxShadow: "0 10px 30px -12px rgb(0 0 0 / 0.35)",
+                  boxShadow: "0 24px 60px -24px rgb(var(--shadow-tint) / 0.45)",
                 }}
               />
             </PieChart>
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 grid place-items-center">
             <div className="text-center">
-              <div className="text-2xl font-bold leading-none tabular-nums">{total}</div>
-              <div className="text-[10px] uppercase tracking-wide text-muted">{t.chart.total}</div>
+              <div className="font-display text-3xl font-medium leading-none tabular-nums">{total}</div>
+              <div className="eyebrow mt-1 text-[10px]">{t.chart.total}</div>
             </div>
           </div>
         </div>
 
-        <ul className="grid flex-1 grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
+        <ul className="min-w-0 flex-1 space-y-2">
           {data.map((d) => (
             <li key={d.status} className="flex items-center gap-2 text-xs">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: d.hex }} />
-              <span className="text-muted">{d.name}</span>
-              <span className="ml-auto font-semibold tabular-nums">{d.value}</span>
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: d.hex }} />
+              <span className="min-w-0 text-muted">{d.name}</span>
+              <span className="ml-auto font-medium tabular-nums">{d.value}</span>
             </li>
           ))}
         </ul>

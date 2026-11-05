@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { api } from "../api/client";
 import { useI18n } from "../i18n";
-import { confidencePct, formatDateTime, senderName } from "../lib/format";
+import { cleanExcerpt, confidencePct, formatDateTime, senderName } from "../lib/format";
 import { INTENT_META } from "../lib/status";
 import type { ApplicationDetail as Detail } from "../lib/types";
 import { IntentBadge, InterviewedTag, StatusBadge } from "./StatusBadge";
@@ -41,7 +41,7 @@ export function ApplicationDetail({
         <div>
           {detail ? (
             <>
-              <h2 id="detail-title" className="text-lg font-bold">
+              <h2 id="detail-title" className="text-3xl font-medium leading-tight">
                 {detail.company}
               </h2>
               <p className="text-sm text-muted">{detail.role ?? "—"}</p>
@@ -105,7 +105,7 @@ export function ApplicationDetail({
                       <span className="text-xs text-muted">{formatDateTime(email.received_at, lang)}</span>
                     </div>
                     <p className="mt-1.5 text-sm font-medium">{email.subject}</p>
-                    <p className="mt-1 line-clamp-2 text-xs text-muted">{email.body_snippet}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-muted">{cleanExcerpt(email.body_snippet)}</p>
 
                     <div className="mt-3 flex flex-wrap items-center gap-3">
                       <IntentBadge intent={email.effective_intent} />

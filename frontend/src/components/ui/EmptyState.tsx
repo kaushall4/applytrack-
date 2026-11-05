@@ -17,7 +17,7 @@ export function EmptyState({
       <div className="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-brand/10 text-brand">
         <Icon className="h-6 w-6" />
       </div>
-      <h3 className="text-base font-semibold">{title}</h3>
+      <h2 className="text-2xl font-medium leading-tight">{title}</h2>
       {body && <p className="mt-1 max-w-sm text-sm text-muted">{body}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>

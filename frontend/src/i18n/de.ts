@@ -5,6 +5,12 @@ export const de: Dict = {
   appName: "ApplyTrack",
   tagline: "Bewerbungs-Tracker",
 
+  dashboard: {
+    title: "Deine Bewerbungen",
+    summary: (interviews: number, total: number) =>
+      `${interviews} ${interviews === 1 ? "Gespräch" : "Gespräche"} aus ${total} Bewerbungen`,
+  },
+
   nav: {
     dashboard: "Übersicht",
     review: "Zu prüfen",

@@ -52,12 +52,12 @@ function useCountUp(target: number, duration = 750): number {
 }
 
 const DEFS: Omit<StatDef, "value">[] = [
-  { key: "total_applied", labelKey: "total", icon: Briefcase, tint: "text-brand bg-brand/10" },
-  { key: "awaiting_response", labelKey: "awaiting", icon: Hourglass, tint: "text-slate-500 bg-slate-500/10" },
-  { key: "interviews", labelKey: "interviews", icon: CalendarCheck, tint: "text-indigo-500 bg-indigo-500/10" },
-  { key: "offers", labelKey: "offers", icon: Award, tint: "text-emerald-500 bg-emerald-500/10" },
-  { key: "rejections", labelKey: "rejections", icon: XCircle, tint: "text-rose-500 bg-rose-500/10" },
-  { key: "ghosted", labelKey: "ghosted", icon: Ghost, tint: "text-amber-500 bg-amber-500/10" },
+  { key: "total_applied", labelKey: "total", icon: Briefcase, tint: "text-brand" },
+  { key: "awaiting_response", labelKey: "awaiting", icon: Hourglass, tint: "text-[#8E8069] dark:text-[#CFC5B4]" },
+  { key: "interviews", labelKey: "interviews", icon: CalendarCheck, tint: "text-[#2F5597] dark:text-[#A4BCEC]" },
+  { key: "offers", labelKey: "offers", icon: Award, tint: "text-[#1F7F5C] dark:text-[#7FD3AE]" },
+  { key: "rejections", labelKey: "rejections", icon: XCircle, tint: "text-[#A63D4D] dark:text-[#E8A3AC]" },
+  { key: "ghosted", labelKey: "ghosted", icon: Ghost, tint: "text-[#C08A2E] dark:text-[#E5C07A]" },
 ];
 
 function StatCard({
@@ -79,7 +79,6 @@ function StatCard({
 }) {
   const display = useCountUp(value);
   const Icon = def.icon;
-  const [iconTint, iconBg] = def.tint.split(" ");
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -92,18 +91,18 @@ function StatCard({
       onKeyDown={onClick ? (e) => (e.key === "Enter" || e.key === " ") && onClick() : undefined}
       title={hint}
       className={cn(
-        "rounded-2xl border bg-surface p-4 shadow-card",
-        onClick && "cursor-pointer transition-colors hover:border-brand/50",
-        active ? "border-brand ring-2 ring-brand/30" : "border-border",
+        "rounded-2xl border bg-surface p-4 shadow-card sm:p-5",
+        onClick && "cursor-pointer transition-[border-color,box-shadow] hover:border-brand/50 hover:shadow-lift",
+        active ? "border-brand ring-1 ring-brand" : "border-border",
       )}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted">{label}</span>
-        <span className={`grid h-7 w-7 place-items-center rounded-lg ${iconBg}`}>
-          <Icon className={`h-4 w-4 ${iconTint}`} />
-        </span>
+      <div className="flex items-start justify-between gap-2">
+        <span className="eyebrow min-h-[2.75em] leading-snug">{label}</span>
+        <Icon className={`h-4 w-4 shrink-0 ${def.tint}`} strokeWidth={1.5} />
       </div>
-      <div className="mt-2 text-3xl font-bold tabular-nums tracking-tight">{display}</div>
+      <div className="font-display mt-3 text-[2.75rem] font-medium leading-none tabular-nums">
+        {display}
+      </div>
     </motion.div>
   );
 }

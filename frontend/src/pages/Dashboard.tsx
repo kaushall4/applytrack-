@@ -54,6 +54,15 @@ export function Dashboard({ onConnect }: { onConnect: () => void }) {
 
   return (
     <div className="space-y-6">
+      <div>
+        <h1 className="text-4xl font-medium leading-tight sm:text-[2.75rem]">{t.dashboard.title}</h1>
+        {stats && stats.total_applied > 0 && (
+          <p className="mt-1 text-sm text-muted">
+            {t.dashboard.summary(stats.interviews, stats.total_applied)}
+          </p>
+        )}
+      </div>
+
       {stats ? (
         <StatCards stats={stats} activeFilter={statusFilter} onSelect={selectCard} />
       ) : (
@@ -78,12 +87,12 @@ export function Dashboard({ onConnect }: { onConnect: () => void }) {
           }
         />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
           {/* On phones the list comes first; the chart moves below it. */}
-          <div className="order-2 lg:order-1 lg:col-span-1">
+          <div className="order-2 lg:order-1">
             {allApps.length > 0 && <StatusDonut applications={allApps} />}
           </div>
-          <div className="order-1 scroll-mt-24 lg:order-2 lg:col-span-2" ref={tableRef}>
+          <div className="order-1 scroll-mt-24 lg:order-2" ref={tableRef}>
             <ApplicationsTable
               applications={apps}
               statusFilter={statusFilter}

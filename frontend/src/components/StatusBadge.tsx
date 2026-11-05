@@ -29,7 +29,7 @@ export function InterviewedTag({ app }: { app: RoundInfo }) {
   return (
     <span
       title={rounds >= 2 ? t.table.advancedHint : t.table.interviewedHint}
-      className="inline-flex items-center gap-1 rounded-full border border-indigo-300/70 px-2 py-0.5 text-[11px] font-medium text-indigo-600 dark:border-indigo-400/30 dark:text-indigo-300"
+      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-brand/35 px-2 py-0.5 text-[11px] font-medium text-brand"
     >
       <CalendarCheck className="h-3 w-3" />
       {label}

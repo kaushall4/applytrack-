@@ -40,14 +40,14 @@ function Brand() {
   const { t } = useI18n();
   return (
     <div className="flex items-center gap-2.5">
-      <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand to-violet-400 text-brand-fg shadow-sm">
+      <div className="gold-fill grid h-9 w-9 place-items-center rounded-full shadow-sm">
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.6}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </div>
       <div className="leading-tight">
-        <div className="text-sm font-bold tracking-tight">{t.appName}</div>
-        <div className="text-[11px] text-muted">{t.tagline}</div>
+        <div className="font-display text-xl font-semibold leading-none">{t.appName}</div>
+        <div className="eyebrow mt-1 text-[9.5px]">{t.tagline}</div>
       </div>
     </div>
   );
@@ -61,7 +61,7 @@ function NavTabs() {
     end ? pathname === to : pathname.startsWith(to);
 
   return (
-    <nav className="flex items-center gap-1 rounded-xl bg-surface-2/70 p-1">
+    <nav className="flex items-center gap-1">
       {NAV.map(({ to, end, key, icon: Icon }) => {
         const active = isActive(to, end);
         return (
@@ -77,7 +77,7 @@ function NavTabs() {
             {active && (
               <motion.span
                 layoutId="nav-pill"
-                className="absolute inset-0 rounded-lg bg-surface shadow-sm ring-1 ring-border"
+                className="absolute inset-x-3 -bottom-0.5 h-px bg-brand"
                 transition={{ type: "spring", stiffness: 380, damping: 30 }}
               />
             )}
@@ -118,7 +118,7 @@ export function Header({
         <div className="ml-auto flex items-center gap-2">
           {connected ? (
             <div className="hidden items-center gap-2 rounded-xl border border-border bg-surface/60 py-1 pl-1 pr-2.5 md:flex">
-              <div className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-brand to-violet-400 text-xs font-bold text-brand-fg">
+              <div className="gold-fill grid h-7 w-7 place-items-center rounded-full text-xs font-semibold">
                 {initial}
               </div>
               <span className="max-w-[170px] truncate text-xs font-medium" title={address}>

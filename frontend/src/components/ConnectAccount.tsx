@@ -46,10 +46,10 @@ export function ConnectAccount({
   return (
     <Modal open={open} onClose={onClose} labelledBy="connect-title">
       <form onSubmit={submit} className="p-6">
-        <div className="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-brand to-violet-400 text-brand-fg shadow-sm">
+        <div className="mb-4 grid h-12 w-12 place-items-center rounded-2xl gold-fill shadow-sm">
           <Mail className="h-6 w-6" />
         </div>
-        <h2 id="connect-title" className="text-lg font-bold">
+        <h2 id="connect-title" className="text-3xl font-medium leading-tight">
           {t.connect.title}
         </h2>
         <p className="mt-2 text-sm text-muted">{t.connect.description}</p>

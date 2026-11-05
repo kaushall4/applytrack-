@@ -30,7 +30,7 @@ export function PairingRequired() {
       <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand/15 text-brand">
         <Smartphone className="h-6 w-6" />
       </span>
-      <h1 className="text-base font-semibold">{t.phone.pairTitle}</h1>
+      <h1 className="text-2xl font-medium leading-tight">{t.phone.pairTitle}</h1>
       <p className="text-sm text-muted">{t.phone.pairBody}</p>
 
       <form onSubmit={submit} className="flex w-full flex-col gap-2 border-t border-border pt-4">

@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { api } from "../api/client";
 import { useI18n } from "../i18n";
-import { confidencePct, formatDateTime, senderName } from "../lib/format";
+import { cleanExcerpt, confidencePct, formatDateTime, senderName } from "../lib/format";
 import { ALL_INTENTS, INTENT_META } from "../lib/status";
 import type { EmailItem, Intent } from "../lib/types";
 import { cn } from "../lib/utils";
@@ -54,7 +54,7 @@ export function ReviewCard({
             <span className="text-[11px] text-muted">{formatDateTime(email.received_at, lang)}</span>
           </div>
           <p className="mt-0.5 truncate text-sm font-medium">{email.subject}</p>
-          <p className="mt-1 line-clamp-2 text-xs text-muted">{email.body_snippet}</p>
+          <p className="mt-1 line-clamp-2 text-xs text-muted">{cleanExcerpt(email.body_snippet)}</p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <IntentBadge intent={email.intent} />

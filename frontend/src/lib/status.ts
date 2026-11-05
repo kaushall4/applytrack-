@@ -16,8 +16,8 @@ import type { Intent, Status } from "./types";
 /**
  * Semantic status meta: badge classes (solid-ish tint), a hex for charts/nodes,
  * and an icon. Colors encode meaning and stay consistent across light/dark:
- *   applied=neutral, received=slate, interview=indigo, next_round=violet,
- *   offer=green, rejection=muted red, ghosted=amber, info_request=teal.
+ *   applied=stone, received=taupe, interview=sapphire, next_round=amethyst,
+ *   offer=emerald, rejection=garnet, ghosted=ochre, info_request=teal.
  */
 interface StatusMeta {
   badge: string;
@@ -28,51 +28,51 @@ interface StatusMeta {
 
 export const STATUS_META: Record<Status, StatusMeta> = {
   application_sent: {
-    badge: "bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:ring-slate-400/20",
-    dot: "bg-slate-400",
-    hex: "#94a3b8",
+    badge: "bg-[#B9AE9B]/10 text-[#6F6556] ring-[#B9AE9B]/25 dark:bg-[#B9AE9B]/15 dark:text-[#CFC5B4] dark:ring-[#CFC5B4]/25",
+    dot: "bg-[#B9AE9B]",
+    hex: "#B9AE9B",
     icon: Send,
   },
   application_received: {
-    badge: "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-500/15 dark:text-slate-200 dark:ring-slate-400/20",
-    dot: "bg-slate-500",
-    hex: "#64748b",
+    badge: "bg-[#8E8069]/10 text-[#5F5444] ring-[#8E8069]/25 dark:bg-[#8E8069]/15 dark:text-[#D8CDBB] dark:ring-[#D8CDBB]/25",
+    dot: "bg-[#8E8069]",
+    hex: "#8E8069",
     icon: Inbox,
   },
   info_request: {
-    badge: "bg-teal-100 text-teal-700 ring-teal-200 dark:bg-teal-500/15 dark:text-teal-300 dark:ring-teal-400/20",
-    dot: "bg-teal-500",
-    hex: "#14b8a6",
+    badge: "bg-[#2F8079]/10 text-[#1F6A65] ring-[#2F8079]/25 dark:bg-[#2F8079]/15 dark:text-[#7FCBC3] dark:ring-[#7FCBC3]/25",
+    dot: "bg-[#2F8079]",
+    hex: "#2F8079",
     icon: FileQuestion,
   },
   interview_invite: {
-    badge: "bg-indigo-100 text-indigo-700 ring-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:ring-indigo-400/20",
-    dot: "bg-indigo-500",
-    hex: "#6366f1",
+    badge: "bg-[#2F5597]/10 text-[#24437F] ring-[#2F5597]/25 dark:bg-[#2F5597]/15 dark:text-[#A4BCEC] dark:ring-[#A4BCEC]/25",
+    dot: "bg-[#2F5597]",
+    hex: "#2F5597",
     icon: CalendarCheck,
   },
   next_round: {
-    badge: "bg-violet-100 text-violet-700 ring-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:ring-violet-400/20",
-    dot: "bg-violet-500",
-    hex: "#8b5cf6",
+    badge: "bg-[#74478F]/10 text-[#5F3679] ring-[#74478F]/25 dark:bg-[#74478F]/15 dark:text-[#CDA9E4] dark:ring-[#CDA9E4]/25",
+    dot: "bg-[#74478F]",
+    hex: "#74478F",
     icon: Layers,
   },
   offer: {
-    badge: "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-400/20",
-    dot: "bg-emerald-500",
-    hex: "#10b981",
+    badge: "bg-[#1F7F5C]/10 text-[#176A4D] ring-[#1F7F5C]/25 dark:bg-[#1F7F5C]/15 dark:text-[#7FD3AE] dark:ring-[#7FD3AE]/25",
+    dot: "bg-[#1F7F5C]",
+    hex: "#1F7F5C",
     icon: Award,
   },
   rejection: {
-    badge: "bg-rose-100 text-rose-600 ring-rose-200 dark:bg-rose-500/12 dark:text-rose-300 dark:ring-rose-400/20",
-    dot: "bg-rose-500",
-    hex: "#f43f5e",
+    badge: "bg-[#A63D4D]/10 text-[#8E2F3D] ring-[#A63D4D]/25 dark:bg-[#A63D4D]/15 dark:text-[#E8A3AC] dark:ring-[#E8A3AC]/25",
+    dot: "bg-[#A63D4D]",
+    hex: "#A63D4D",
     icon: XCircle,
   },
   ghosted: {
-    badge: "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-400/20",
-    dot: "bg-amber-500",
-    hex: "#f59e0b",
+    badge: "bg-[#C08A2E]/10 text-[#855C12] ring-[#C08A2E]/25 dark:bg-[#C08A2E]/15 dark:text-[#E5C07A] dark:ring-[#E5C07A]/25",
+    dot: "bg-[#C08A2E]",
+    hex: "#C08A2E",
     icon: Clock,
   },
 };
@@ -87,9 +87,9 @@ export const INTENT_META: Record<Intent, StatusMeta> = {
   offer: STATUS_META.offer,
   info_request: STATUS_META.info_request,
   not_application_related: {
-    badge: "bg-slate-100 text-slate-500 ring-slate-200 dark:bg-slate-600/15 dark:text-slate-400 dark:ring-slate-500/20",
-    dot: "bg-slate-300",
-    hex: "#cbd5e1",
+    badge: "bg-[#B9AE9B]/10 text-[#7A7060] ring-[#B9AE9B]/25 dark:bg-[#B9AE9B]/10 dark:text-[#AC9F8C] dark:ring-[#B9AE9B]/20",
+    dot: "bg-[#D6CDBD]",
+    hex: "#D6CDBD",
     icon: CheckCircle2,
   },
 };

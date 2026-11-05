@@ -46,8 +46,8 @@ function Chip({
       className={cn(
         "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:py-1",
         active
-          ? "border-brand bg-brand text-brand-fg shadow-sm"
-          : "border-border bg-surface text-muted hover:text-fg hover:border-brand/40",
+          ? "border-fg bg-fg text-bg"
+          : "border-border bg-surface text-muted hover:text-fg hover:border-brand/50",
       )}
     >
       {children}
@@ -93,7 +93,7 @@ export function ApplicationsTable({
     <th className={cn("px-4 py-3", right && "text-right")}>
       <button
         onClick={() => toggleSort(k)}
-        className={cn("inline-flex items-center gap-1 font-medium transition-colors hover:text-fg", right && "flex-row-reverse")}
+        className={cn("inline-flex items-center gap-1 whitespace-nowrap uppercase transition-colors hover:text-fg", right && "flex-row-reverse")}
       >
         {label}
         {sort === k ? (
@@ -174,7 +174,7 @@ export function ApplicationsTable({
                 className="flex w-full flex-col gap-1.5 px-4 py-3.5 text-left active:bg-surface-2/70"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <span className="font-semibold">{a.company}</span>
+                  <span className="font-display text-xl font-semibold leading-tight">{a.company}</span>
                   <span className="shrink-0 text-xs text-muted">
                     {relativeTime(a.last_event_at, lang)}
                   </span>
@@ -196,7 +196,7 @@ export function ApplicationsTable({
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-xs text-muted">
+              <tr className="eyebrow border-b border-border text-left">
                 <SortHead k="company" label={t.table.company} />
                 <SortHead k="role" label={t.table.role} />
                 <SortHead k="status" label={t.table.status} />
@@ -213,10 +213,12 @@ export function ApplicationsTable({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: Math.min(i, 14) * 0.02, duration: 0.25 }}
                   onClick={() => onSelect(a)}
-                  className="group cursor-pointer border-b border-border/50 transition-colors last:border-0 hover:bg-surface-2/70"
+                  className="group cursor-pointer border-b border-border/50 transition-colors last:border-0 hover:bg-surface-2/60"
                 >
-                  <td className="px-4 py-3 font-medium">
-                    <span className="transition-colors group-hover:text-brand">{a.company}</span>
+                  <td className="px-4 py-3.5">
+                    <span className="font-display text-lg font-semibold leading-tight transition-colors group-hover:text-brand">
+                      {a.company}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-muted">{a.role ?? "—"}</td>
                   <td className="px-4 py-3">
@@ -225,10 +227,10 @@ export function ApplicationsTable({
                       <InterviewedTag app={a} />
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-muted">{formatDate(a.first_applied_at, lang)}</td>
-                  <td className="px-4 py-3 text-muted">{relativeTime(a.last_event_at, lang)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-muted">{formatDate(a.first_applied_at, lang)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-muted">{relativeTime(a.last_event_at, lang)}</td>
                   <td className="px-4 py-3 text-right">
-                    <span className="rounded border border-border px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+                    <span className="text-[11px] font-medium tracking-wider text-muted">
                       {a.language.toUpperCase()}
                     </span>
                   </td>

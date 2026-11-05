@@ -8,7 +8,8 @@ import {
 } from "react";
 
 type Theme = "light" | "dark";
-const STORAGE_KEY = "applytrack.theme";
+// New key: the old one also held dark mode inherited from the system, not chosen.
+const STORAGE_KEY = "applytrack.theme.v2";
 
 interface ThemeContextValue {
   theme: Theme;
@@ -19,8 +20,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function initialTheme(): Theme {
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return stored === "dark" ? "dark" : "light"; // bright unless dark was chosen here
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -28,11 +28,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem(STORAGE_KEY, theme);
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "dark" ? "#13110e" : "#fbf8f2");
   }, [theme]);
 
   const toggle = useCallback(() => {
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
+    setTheme((t) => {
+      const next = t === "dark" ? "light" : "dark";
+      localStorage.setItem(STORAGE_KEY, next);
+      return next;
+    });
   }, []);
 
   return (

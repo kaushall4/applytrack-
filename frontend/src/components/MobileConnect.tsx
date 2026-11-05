@@ -54,7 +54,7 @@ export function MobileConnect({ open, onClose }: { open: boolean; onClose: () =>
           <Smartphone className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 id="mobile-title" className="text-base font-semibold">
+          <h2 id="mobile-title" className="text-2xl font-medium leading-tight">
             {t.phone.title}
           </h2>
           <p className="mt-1 text-sm text-muted">{t.phone.intro}</p>
