@@ -57,7 +57,9 @@ export function MobileConnect({ open, onClose }: { open: boolean; onClose: () =>
           <h2 id="mobile-title" className="text-2xl font-medium leading-tight">
             {t.phone.title}
           </h2>
-          <p className="mt-1 text-sm text-muted">{t.phone.intro}</p>
+          <p className="mt-1 text-sm text-muted">
+            {status?.cloud ? t.phone.cloudIntro : t.phone.intro}
+          </p>
         </div>
         <button onClick={onClose} className="text-muted hover:text-fg" aria-label="Close">
           <X className="h-5 w-5" />

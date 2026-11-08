@@ -28,6 +28,8 @@ interface HeaderProps {
   onDisconnect: () => void;
   /** Opens the phone pairing dialog; omitted on the phone itself. */
   onPhone?: () => void;
+  /** Hide the page navigation (e.g. on an unpaired phone, where it leads nowhere). */
+  hideNav?: boolean;
 }
 
 const NAV = [
@@ -99,6 +101,7 @@ export function Header({
   onReconnect,
   onDisconnect,
   onPhone,
+  hideNav = false,
 }: HeaderProps) {
   const { t } = useI18n();
   const connected = account?.connected ?? false;
@@ -111,9 +114,11 @@ export function Header({
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
         <Brand />
 
-        <div className="ml-2 hidden sm:block">
-          <NavTabs />
-        </div>
+        {!hideNav && (
+          <div className="ml-2 hidden sm:block">
+            <NavTabs />
+          </div>
+        )}
 
         <div className="ml-auto flex items-center gap-2">
           {connected ? (
@@ -188,9 +193,11 @@ export function Header({
       </div>
 
       {/* Mobile nav */}
-      <div className="border-t border-border px-4 py-2 sm:hidden">
-        <NavTabs />
-      </div>
+      {!hideNav && (
+        <div className="border-t border-border px-4 py-2 sm:hidden">
+          <NavTabs />
+        </div>
+      )}
     </header>
   );
 }

@@ -30,9 +30,7 @@ createRoot(document.getElementById("root")!).render(
     <ThemeProvider>
       <I18nProvider>
         <ToastProvider>
-          <BrowserRouter
-            future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-          >
+          <BrowserRouter>
             <App />
           </BrowserRouter>
         </ToastProvider>

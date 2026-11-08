@@ -9,7 +9,8 @@ export function cleanExcerpt(text: string): string {
   return decoded
     .replace(/\[cid:[^\]]*\]/gi, " ")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    .replace(/^\d{1,3}\s+(?=\p{Lu})/u, ""); // "96 Dear Kaushall" → "Dear Kaushall"
 }
 
 export function formatDate(iso: string | null, lang: Language): string {

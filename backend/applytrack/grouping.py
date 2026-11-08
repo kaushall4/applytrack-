@@ -182,6 +182,12 @@ def _split_email(email: str) -> tuple[str, list[str], bool, bool] | None:
     return local, labels, is_ats, labels[-2] in _FREEMAIL
 
 
+def is_ats_address(header: str) -> bool:
+    """True if the mail comes from an applicant-tracking platform (Workday, …)."""
+    parts = _split_email(_parse_header(header)[1])
+    return bool(parts and parts[2])
+
+
 def _company_from_ats_email(local: str, labels: list[str]) -> str | None:
     """Employer on an ATS address: a non-generic subdomain, else the local part."""
     for cand in reversed(labels[:-2]):

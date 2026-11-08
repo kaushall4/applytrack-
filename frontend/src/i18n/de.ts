@@ -68,6 +68,7 @@ export const de: Dict = {
     codeWrong: "Code falsch oder abgelaufen — am PC «Handy» neu öffnen.",
     iphoneTip: "Wichtig: in Safari öffnen und von dort «Zum Home-Bildschirm» wählen.",
     cloudScanHint: "Funktioniert in jedem Netz — WLAN oder Mobilfunk.",
+    cloudIntro: "Installiere ApplyTrack als App auf deinem Handy — kostenlos, ohne App Store. Das Handy liest deine Daten aus deiner privaten Cloud-Kopie, geschützt durch deinen persönlichen Schlüssel.",
     cloudNote: "Läuft in der Gratis-Cloud: auch wenn dieser Laptop aus ist. Nach längerer Pause braucht der erste Start bis zu einer Minute.",
   },
 
@@ -103,6 +104,8 @@ export const de: Dict = {
     interviewedHint: "Alle Bewerbungen mit Gespräch — auch mit späterer Absage",
     interviewedTag: "Gespräch geführt",
     roundTag: (n: number) => `${n}. Runde erreicht`,
+    quietTag: (n: number) => `Seit ${n} Tagen still`,
+    quietHint: "Nach dem Gespräch kam seit über zwei Wochen keine Nachricht — nachfragen?",
     advancedHint: "Alle Bewerbungen mit einer weiteren Runde — auch mit späterer Absage",
   },
 

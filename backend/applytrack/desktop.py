@@ -40,6 +40,23 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
+def _port_in_use(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.5)
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
+
+def _notify(message: str) -> None:
+    """Show a short message box (Windows) — the shortcut has no console."""
+    logger.warning(message)
+    try:
+        import ctypes
+
+        ctypes.windll.user32.MessageBoxW(None, message, WINDOW_TITLE, 0x40)  # info icon
+    except Exception:  # noqa: BLE001 — not on Windows
+        print(message)
+
+
 def _wait_until_ready(url: str, timeout: float = 15.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -67,6 +84,14 @@ def run_desktop(*, width: int = 1280, height: int = 860) -> None:
         # Phone app enabled: listen in the home network on a fixed port so the
         # installed phone app always finds the PC (pairing key still required).
         host, port = "0.0.0.0", settings.mobile_port
+        if _port_in_use(port):
+            # A second start would get no server of its own and show a dead
+            # window once the first one closes.
+            if _wait_until_ready(f"http://127.0.0.1:{port}/api/health", timeout=2):
+                _notify("ApplyTrack ist bereits geöffnet — schau in der Taskleiste nach.")
+            else:
+                _notify(f"Port {port} ist belegt. Bitte ApplyTrack beenden und neu starten.")
+            return
     else:
         host, port = "127.0.0.1", _free_port()
     base_url = f"http://127.0.0.1:{port}"

@@ -7,7 +7,7 @@ import { formatDate, relativeTime } from "../lib/format";
 import { ALL_STATUSES, STATUS_META } from "../lib/status";
 import type { Application, Language, StatusFilter } from "../lib/types";
 import { cn } from "../lib/utils";
-import { InterviewedTag, StatusBadge } from "./StatusBadge";
+import { InterviewedTag, QuietTag, StatusBadge } from "./StatusBadge";
 
 type SortKey = "company" | "role" | "status" | "first_applied_at" | "last_event_at";
 
@@ -183,6 +183,7 @@ export function ApplicationsTable({
                 <div className="flex flex-wrap items-center gap-1.5">
                   <StatusBadge status={a.current_status} />
                   <InterviewedTag app={a} />
+                  <QuietTag app={a} />
                   <span className="ml-auto text-[11px] text-muted">
                     {t.table.applied} {formatDate(a.first_applied_at, lang)}
                   </span>
@@ -225,6 +226,7 @@ export function ApplicationsTable({
                     <div className="flex flex-wrap items-center gap-1.5">
                       <StatusBadge status={a.current_status} />
                       <InterviewedTag app={a} />
+                  <QuietTag app={a} />
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-muted">{formatDate(a.first_applied_at, lang)}</td>

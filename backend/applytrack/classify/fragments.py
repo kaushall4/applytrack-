@@ -137,6 +137,7 @@ FRAGMENTS: dict[Intent, list[str]] = {
         "still considering your application", "that you applied", "interest in our open position",
         "moved to our shortlist", "few more days to evaluate", "dem hiring manager",
         "application was received", "to the hiring manager", "line manager screen",
+        "taking the time to apply", "finding out more about you",
         "line management screen",
         # DE
         "empfang ihrer bewerbung", "vielen dank fuer die bewerbung", "sich bei uns beworben",

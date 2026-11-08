@@ -67,6 +67,7 @@ export const en = {
     codeWrong: "Wrong or expired code — reopen “Phone” on the PC.",
     iphoneTip: "Important: open it in Safari and choose “Add to Home Screen” there.",
     cloudScanHint: "Works on any network — Wi-Fi or mobile data.",
+    cloudIntro: "Install ApplyTrack as an app on your phone — free, no app store. The phone reads your data from your private cloud copy, protected by your personal key.",
     cloudNote: "Runs in the free cloud: even while this laptop is off. After a longer pause the first start can take up to a minute.",
   },
 
@@ -102,6 +103,8 @@ export const en = {
     interviewedHint: "Every application with an interview — including later rejections",
     interviewedTag: "Interviewed",
     roundTag: (n: number) => `Reached round ${n}`,
+    quietTag: (n: number) => `Quiet for ${n} days`,
+    quietHint: "No message for over two weeks since the interview — follow up?",
     advancedHint: "Every application that reached a further round — including later rejections",
   },
 

@@ -7,7 +7,7 @@ import { useI18n } from "../i18n";
 import { cleanExcerpt, confidencePct, formatDateTime, senderName } from "../lib/format";
 import { INTENT_META } from "../lib/status";
 import type { ApplicationDetail as Detail } from "../lib/types";
-import { IntentBadge, InterviewedTag, StatusBadge } from "./StatusBadge";
+import { IntentBadge, InterviewedTag, QuietTag, StatusBadge } from "./StatusBadge";
 import { Modal } from "./ui/Modal";
 import { Skeleton } from "./ui/Skeleton";
 
@@ -48,6 +48,7 @@ export function ApplicationDetail({
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <StatusBadge status={detail.current_status} />
                 <InterviewedTag app={detail} />
+                <QuietTag app={detail} />
               </div>
             </>
           ) : (

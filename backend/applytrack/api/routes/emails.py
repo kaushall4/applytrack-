@@ -32,10 +32,17 @@ def needs_review(session: Session = Depends(get_session)) -> list[Email]:
 
 @router.get("/noise", response_model=list[EmailOut])
 def noise(session: Session = Depends(get_session)) -> list[Email]:
-    """Mail filtered out as not-application-related (kept, never silently dropped)."""
+    """Mail filtered out as not-application-related (kept, never silently dropped).
+
+    Your own replies and mails inside an application's thread are part of that
+    application's timeline, so they are not listed here.
+    """
     stmt = (
         select(Email)
         .where(Email.intent == Intent.NOT_APPLICATION_RELATED.value)
+        .where(Email.manual_override.is_(None))
+        .where(Email.direction == "received")
+        .where(Email.application_id.is_(None))
         .order_by(Email.received_at.desc())
     )
     return list(session.execute(stmt).scalars().all())

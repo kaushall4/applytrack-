@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from ...config import get_settings
 from ...db import get_session
+from ...gmail.sync import _recompute_application
 from ...models import INTERVIEW_STAGE_INTENTS, Application, Email
 from ...schemas import ApplicationDetailOut, ApplicationOut, StatsOut
 from ...status import Status
@@ -45,8 +49,29 @@ def _next_round_app_ids():
     )
 
 
+def _refresh_time_based_statuses(session: Session) -> None:
+    """Re-evaluate waiting applications whose quiet period may have run out.
+
+    "Ghosted" depends on today's date, not only on new mail, so without this
+    the counts would only move after the next sync.
+    """
+    days = get_settings().ghost_threshold_days
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+    waiting = session.execute(
+        select(Application.id).where(
+            Application.current_status.in_(_AWAITING),
+            Application.last_event_at < cutoff,
+        )
+    ).scalars().all()
+    for app_id in waiting:
+        _recompute_application(session, app_id)
+    if waiting:
+        session.commit()
+
+
 @router.get("/stats", response_model=StatsOut)
 def stats(session: Session = Depends(get_session)) -> StatsOut:
+    _refresh_time_based_statuses(session)
     rows = session.execute(
         select(Application.current_status, func.count(Application.id)).group_by(
             Application.current_status
@@ -88,6 +113,7 @@ def list_applications(
     order: str = Query("desc", pattern="^(asc|desc)$"),
     session: Session = Depends(get_session),
 ) -> list[Application]:
+    _refresh_time_based_statuses(session)
     # Emails are needed for `reached_interview`; load them in one query.
     stmt = select(Application).options(selectinload(Application.emails))
     if status:

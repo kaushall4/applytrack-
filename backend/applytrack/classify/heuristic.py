@@ -47,6 +47,17 @@ class HeuristicClassifier:
 
         intent, fragments, weak = classify_by_precedence(text, subject=email.subject)
 
+        if intent is Intent.NOT_APPLICATION_RELATED and _unclear_application_mail(email):
+            # About an application, but in words we don't know yet: never filter
+            # it away silently — show it under "Needs review" instead.
+            return Classification(
+                intent=Intent.APPLICATION_RECEIVED,
+                confidence=0.45,
+                language=language,
+                source=self.source,
+                reasoning="Mail about an application in unfamiliar wording — please check.",
+            ).clamp()
+
         if intent is Intent.NOT_APPLICATION_RELATED:
             # No application signal. If the sender is a known job-board / no-reply
             # marketing address, label it noise with slightly higher confidence.
@@ -111,6 +122,30 @@ class HeuristicClassifier:
             source=self.source,
             reasoning="Application sent from the tracked account.",
         ).clamp()
+
+
+# Portal housekeeping that is never an application event.
+_ACCOUNT_NOISE_RE = re.compile(
+    r"verif|registr|log-?in|passw|one[- ]time|\bcode\b|identit|account (?:has been )?created|"
+    r"konto|complete (?:your )?(?:job )?application|final step|neue stellen|new jobs|job alert|"
+    r"stay connected|newsletter",
+    re.IGNORECASE,
+)
+_APPLICATION_TOPIC_RE = re.compile(r"\bappl(?:y|ied|ying|ication)|bewerb|candidacy|kandidatur",
+                                   re.IGNORECASE)
+
+
+def _unclear_application_mail(email: EmailInput) -> bool:
+    """Inbound portal / recruiter mail that talks about an application."""
+    from ..grouping import is_ats_address
+
+    if _ACCOUNT_NOISE_RE.search(email.subject or ""):
+        return False
+    from_portal = is_ats_address(email.sender)
+    subject_says_so = bool(_APPLICATION_TOPIC_RE.search(email.subject or ""))
+    if not (from_portal or subject_says_so):
+        return False
+    return bool(_APPLICATION_TOPIC_RE.search(email.body or ""))
 
 
 # "Re:", "AW:", "Antw:", "Fwd:", "WG:", "FW:" (possibly repeated) at the start.

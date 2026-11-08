@@ -78,8 +78,18 @@ h2,
   background-color: rgb(var(--brand) / 0.22);
 }
 
-::placeholder {
+/* Same selectors as Tailwind's preflight so this later rule wins. */
+input::placeholder,
+textarea::placeholder {
   color: rgb(var(--muted) / 0.75);
+}
+
+@layer base {
+  /* Keyboard focus: a clear gold ring (mouse clicks don't show it). */
+  :focus-visible {
+    outline: 2px solid rgb(var(--ring));
+    outline-offset: 2px;
+  }
 }
 
 /* Small uppercase label used above figures and in table heads. */
