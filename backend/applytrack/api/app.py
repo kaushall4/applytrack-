@@ -51,6 +51,25 @@ def _frontend_dist() -> Path | None:
     return dist if (dist / "index.html").is_file() else None
 
 
+def _static_file(dist: Path, requested: str) -> Path | None:
+    """The file inside ``dist`` that a URL path names, or None.
+
+    The path comes straight from the URL (``..%2f`` arrives here decoded), so
+    it is resolved and must still lie inside ``dist`` — otherwise a request
+    could read any file on the machine (.env, the Gmail token, …).
+    """
+    if not requested:
+        return None
+    root = dist.resolve()
+    try:
+        candidate = (root / requested).resolve()
+    except (OSError, ValueError):
+        return None
+    if candidate != root and root in candidate.parents and candidate.is_file():
+        return candidate
+    return None
+
+
 def _mount_frontend(app: FastAPI) -> None:
     """Serve the built SPA: hashed assets verbatim, everything else → index.html.
 
@@ -80,10 +99,7 @@ def _mount_frontend(app: FastAPI) -> None:
 
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa(full_path: str) -> FileResponse:
-        candidate = dist / full_path
-        if full_path and candidate.is_file():
-            return FileResponse(candidate)
-        return FileResponse(index)
+        return FileResponse(_static_file(dist, full_path) or index)
 
 
 @asynccontextmanager
